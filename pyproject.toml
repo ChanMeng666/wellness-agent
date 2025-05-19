@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wellness-agent"
+version = "0.1.0"
+description = "A comprehensive workplace wellness agent built with Google's Agent Development Kit (ADK)"
+readme = "README.md"
+authors = [
+    {name = "Wellness Agent Contributors", email = "example@example.com"}
+]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Office/Business :: Groupware",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["wellness", "ADK", "agent", "AI", "workplace", "health"]
+dependencies = [
+    "google-adk>=0.0.2",
+    "google-genai>=1.5.0",
+    "pydantic>=2.10.6",
+    "python-dotenv>=1.0.0",
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.1",
+    "black>=23.3.0",
+    "isort>=5.12.0",
+    "mypy>=1.3.0",
+    "ruff>=0.0.267",
+]
+deploy = [
+    "absl-py>=2.2.1",
+    "google-cloud-aiplatform[agent_engines]>=1.91.0,!=1.92.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["wellness_agent*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+select = ["E", "F", "W", "I", "C"]
+ignore = ["E203"] 

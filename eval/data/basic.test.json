@@ -1,0 +1,32 @@
+[
+  {
+    "query": "Who are you and how can you help me?",
+    "expected_tool_use": [],
+    "reference": "I am a Wellness Support Agent that can help with workplace wellness. I support employees with symptom tracking, wellness tips, and accommodation requests. I also help HR managers with anonymous trends and employers with organizational insights."
+  },
+  {
+    "query": "I'm feeling fatigued today, it's about a 7 out of 10.",
+    "expected_tool_use": ["track_symptom"],
+    "reference": "I've recorded your fatigue symptom with severity 7."
+  },
+  {
+    "query": "What are some tips for managing fatigue at work?",
+    "expected_tool_use": ["get_wellness_tips"],
+    "reference": "Here are some workplace tips for fatigue: take breaks, schedule challenging tasks during peak energy hours, and stay hydrated."
+  },
+  {
+    "query": "I need to work from home tomorrow due to not feeling well.",
+    "expected_tool_use": ["request_accommodation"],
+    "reference": "I've submitted your remote work accommodation request for tomorrow."
+  },
+  {
+    "query": "Show me the trends for accommodation requests this quarter.",
+    "expected_tool_use": ["view_anonymous_trends"],
+    "reference": "Here's an analysis of accommodation requests across the organization for the past quarter."
+  },
+  {
+    "query": "What's the ROI on our wellness program?",
+    "expected_tool_use": ["calculate_wellness_roi"],
+    "reference": "I've calculated the ROI for your wellness program, showing benefits across multiple metrics."
+  }
+] 

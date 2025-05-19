@@ -8,7 +8,8 @@ from wellness_agent.tool_handlers import (
     quick_check_in_handler,
     get_wellness_tips_handler,
     request_accommodation_handler,
-    view_symptom_history_handler
+    view_symptom_history_handler,
+    visualize_symptom_trends_handler
 )
 
 # ----- Define Function Tools -----
@@ -19,6 +20,7 @@ quick_check_in_tool = FunctionTool(func=quick_check_in_handler)
 get_wellness_tips_tool = FunctionTool(func=get_wellness_tips_handler)
 request_accommodation_tool = FunctionTool(func=request_accommodation_handler)
 view_symptom_history_tool = FunctionTool(func=view_symptom_history_handler)
+visualize_symptom_trends_tool = FunctionTool(func=visualize_symptom_trends_handler)
 
 # Group Employee tools
 EMPLOYEE_TOOLS = [
@@ -26,7 +28,8 @@ EMPLOYEE_TOOLS = [
     quick_check_in_tool,
     get_wellness_tips_tool,
     request_accommodation_tool,
-    view_symptom_history_tool
+    view_symptom_history_tool,
+    visualize_symptom_trends_tool
 ]
 
 # ----- Legacy Tool Handlers (kept for reference) -----

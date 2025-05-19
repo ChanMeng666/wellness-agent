@@ -9,6 +9,7 @@ from wellness_agent.sub_agents.employee_support.agent import employee_support_to
 from wellness_agent.sub_agents.hr_manager.agent import hr_manager_tool
 from wellness_agent.sub_agents.employer_insights.agent import employer_insights_tool
 from wellness_agent.sub_agents.search.agent import search_tool
+from wellness_agent.sub_agents.leave_requests.agent import leave_requests_tool
 from wellness_agent.privacy.callbacks import privacy_callback
 
 # Custom callback for privacy controls - kept for reference but not used
@@ -35,6 +36,9 @@ def privacy_callback(state: Dict[str, Any]) -> Dict[str, Any]:
 ROOT_INSTRUCTION_UPDATED = ROOT_INSTRUCTION + """
 You can also use the search_tool to find relevant wellness information from reputable sources on the web.
 When a user needs information that isn't in your knowledge base, consider using the search_tool to help them.
+
+You can assist employees with discreet leave requests through the leave_requests_tool, which helps them
+request time off or accommodations while preserving their privacy and dignity.
 """
 
 # Note: state_callback parameter has been removed as it's not supported in the current ADK version
@@ -48,7 +52,8 @@ root_agent = Agent(
         employee_support_tool,
         hr_manager_tool,
         employer_insights_tool,
-        search_tool
+        search_tool,
+        leave_requests_tool
     ],
     generate_content_config=types.GenerateContentConfig(
         safety_settings=[

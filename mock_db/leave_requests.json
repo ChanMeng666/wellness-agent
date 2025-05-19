@@ -1,0 +1,44 @@
+{
+  "LR-20250520-ABC123": {
+    "request_id": "LR-20250520-ABC123",
+    "employee_id": "demo_profile_123",
+    "request_type": "sick_day",
+    "start_date": "2025-05-21",
+    "end_date": "2025-05-21",
+    "disclosure_level": "no_reason",
+    "work_impact_notes": null,
+    "status": "approved",
+    "submitted_at": "2025-05-20T10:30:00Z",
+    "processed_at": "2025-05-20T11:15:00Z",
+    "processed_by": "manager_789",
+    "notes": null
+  },
+  "LR-20250518-DEF456": {
+    "request_id": "LR-20250518-DEF456",
+    "employee_id": "demo_profile_123",
+    "request_type": "remote_work",
+    "start_date": "2025-05-20",
+    "end_date": "2025-05-22",
+    "disclosure_level": "work_impact_only",
+    "work_impact_notes": "Need quiet environment for focused work",
+    "status": "approved",
+    "submitted_at": "2025-05-18T15:45:00Z",
+    "processed_at": "2025-05-19T09:20:00Z",
+    "processed_by": "manager_789",
+    "notes": null
+  },
+  "LR-20250520-185A7C": {
+    "request_id": "LR-20250520-185A7C",
+    "employee_id": "demo_profile_123",
+    "request_type": "sick_day",
+    "start_date": "2024-07-26",
+    "end_date": null,
+    "disclosure_level": "no_reason",
+    "work_impact_notes": null,
+    "status": "pending",
+    "submitted_at": "2025-05-20T02:48:37.389529",
+    "processed_at": null,
+    "processed_by": null,
+    "notes": null
+  }
+}

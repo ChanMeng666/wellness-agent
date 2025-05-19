@@ -8,28 +8,24 @@ from wellness_agent.db.bigquery import BigQueryClient
 from wellness_agent.privacy.anonymizer import Anonymizer
 from wellness_agent.services.symptom_service import SymptomService
 from wellness_agent.services.db_service import DatabaseService
+from wellness_agent.services.db.leave_request_service import LeaveRequestService
+from wellness_agent.services.db.accommodation_plan_service import AccommodationPlanService
 
 class ServiceFactory:
-    """Factory for creating and caching service instances."""
+    """
+    Factory for creating service instances.
     
-    _instance = None
+    This helps manage service dependencies and configuration,
+    and ensures services are properly initialized.
+    """
     
-    def __new__(cls):
-        """Singleton pattern implementation."""
-        if cls._instance is None:
-            cls._instance = super(ServiceFactory, cls).__new__(cls)
-            cls._instance._initialize()
-        return cls._instance
-    
-    def _initialize(self):
-        """Initialize the factory and shared resources."""
-        # Initialize database clients
+    def __init__(self):
+        """Initialize the service factory."""
+        self._services = {}
+        self._use_mock = os.getenv("USE_MOCK_SERVICES", "false").lower() == "true"
         self.firestore_client = None
         self.bigquery_client = None
         self.anonymizer = None
-        
-        # Cache for services
-        self.services = {}
         
         # Try to initialize shared clients
         try:
@@ -42,19 +38,67 @@ class ServiceFactory:
             print(f"Warning: Failed to initialize shared clients: {e}")
             # Will use default initialization in services
     
-    def get_symptom_service(self) -> SymptomService:
-        """Get or create a SymptomService instance.
+    def get_leave_request_service(self) -> LeaveRequestService:
+        """
+        Get or create a LeaveRequestService instance.
         
         Returns:
-            A SymptomService instance
+            An initialized LeaveRequestService
         """
-        if "symptom_service" not in self.services:
-            self.services["symptom_service"] = SymptomService(
-                firestore_client=self.firestore_client,
-                bigquery_client=self.bigquery_client,
-                anonymizer=self.anonymizer
-            )
-        return self.services["symptom_service"]
+        if "leave_request_service" not in self._services:
+            self._services["leave_request_service"] = LeaveRequestService()
+        return self._services["leave_request_service"]
+    
+    def get_accommodation_plan_service(self) -> AccommodationPlanService:
+        """
+        Get or create an AccommodationPlanService instance.
+        
+        Returns:
+            An initialized AccommodationPlanService
+        """
+        if "accommodation_plan_service" not in self._services:
+            self._services["accommodation_plan_service"] = AccommodationPlanService()
+        return self._services["accommodation_plan_service"]
+    
+    def get_symptom_service(self):
+        """
+        Get or create a SymptomService instance.
+        
+        This is a placeholder for a service that would be implemented in a real system.
+        
+        Returns:
+            A mock SymptomService with placeholder methods
+        """
+        if "symptom_service" not in self._services:
+            # This would be a real service in a full implementation
+            # For now, return a simple mock object with the expected methods
+            self._services["symptom_service"] = type('MockSymptomService', (), {
+                'track_symptom': lambda **kwargs: {
+                    "status": "success",
+                    "message": f"Your {kwargs.get('symptom_type')} symptom has been logged.",
+                    "data": kwargs
+                },
+                'get_wellness_tips': lambda **kwargs: {
+                    "status": "success", 
+                    "message": f"Here are some tips for {kwargs.get('symptom_type')}:",
+                    "tips": [
+                        "Take regular breaks throughout your workday",
+                        "Stay hydrated with water",
+                        "Practice deep breathing when feeling stressed",
+                        "Consider speaking with your healthcare provider about persistent symptoms",
+                        "Remember to maintain good posture at your workstation"
+                    ]
+                },
+                'get_symptom_history': lambda **kwargs: {
+                    "status": "success",
+                    "message": f"Here's your symptom history:",
+                    "data": {
+                        "symptom_counts": {"headache": 5, "fatigue": 3},
+                        "severity_trends": []
+                    }
+                }
+            })()
+        return self._services["symptom_service"]
     
     def get_database_service(self) -> DatabaseService:
         """Get the database service instance.
@@ -62,12 +106,12 @@ class ServiceFactory:
         Returns:
             DatabaseService instance
         """
-        if "db_service" not in self.services:
-            self.services["db_service"] = DatabaseService(os.getenv("GOOGLE_CLOUD_PROJECT"))
-        return self.services["db_service"]
+        if "db_service" not in self._services:
+            self._services["db_service"] = DatabaseService(os.getenv("GOOGLE_CLOUD_PROJECT"))
+        return self._services["db_service"]
     
     def reset_services(self):
         """Reset all cached service instances."""
-        self.services = {}
+        self._services = {}
     
     # Add similar methods for other services 

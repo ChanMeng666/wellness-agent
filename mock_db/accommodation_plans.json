@@ -1,0 +1,19 @@
+{
+  "AP-20250515-XYZ789": {
+    "plan_id": "AP-20250515-XYZ789",
+    "employee_id": "demo_profile_123",
+    "accommodation_types": ["remote_work", "flexible_schedule"],
+    "duration": "3_months",
+    "frequency": "specific_days",
+    "specific_days": ["Monday", "Wednesday", "Friday"],
+    "functional_limitations": ["Needs reduced environmental stimuli", "Requires regular rest periods"],
+    "privacy_level": "limited",
+    "manager_notes": "Employee needs a quieter work environment on these days.",
+    "status": "approved",
+    "created_at": "2025-05-15T09:30:00Z",
+    "review_date": "2025-08-15",
+    "approved_at": "2025-05-16T14:20:00Z",
+    "approved_by": "hr_manager_456",
+    "notes": "Approved as requested. Will follow up mid-July to check effectiveness."
+  }
+} 

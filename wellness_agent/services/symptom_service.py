@@ -326,4 +326,91 @@ class SymptomService:
             "status": "success",
             "message": f"Generated anonymized symptom trends for {time_period}",
             "data": aggregated_data
-        } 
+        }
+
+    def log_symptom(self, profile_id: str, symptom_data: Dict[str, Any], 
+                   severity_level: int, notes: Optional[str] = None) -> Dict[str, Any]:
+        """Log a symptom for an employee.
+        
+        Args:
+            profile_id: Employee profile ID
+            symptom_data: Symptom information
+            severity_level: Severity level (1-10)
+            notes: Optional notes
+            
+        Returns:
+            Created symptom log data
+        """
+        return self.db.log_symptom(profile_id, symptom_data, severity_level, notes)
+    
+    def get_symptom_history(self, profile_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get symptom history for an employee.
+        
+        Args:
+            profile_id: Employee profile ID
+            days: Number of days to look back
+            
+        Returns:
+            List of symptom log data
+        """
+        return self.db.get_symptom_history(profile_id, days)
+    
+    def analyze_symptom_trends(self, profile_id: str, days: int = 90) -> Dict[str, Any]:
+        """Analyze trends in symptom data for an individual.
+        
+        Args:
+            profile_id: Employee profile ID
+            days: Number of days to analyze
+            
+        Returns:
+            Analysis results
+        """
+        # Get symptom history
+        symptom_logs = self.get_symptom_history(profile_id, days)
+        
+        # Group by symptom type
+        symptom_types = {}
+        for log in symptom_logs:
+            symptom_type = log.get("symptom_data", {}).get("type", "unknown")
+            if symptom_type not in symptom_types:
+                symptom_types[symptom_type] = {
+                    "count": 0,
+                    "severity_sum": 0,
+                    "logs": []
+                }
+            
+            symptom_types[symptom_type]["count"] += 1
+            symptom_types[symptom_type]["severity_sum"] += log.get("severity_level", 0)
+            symptom_types[symptom_type]["logs"].append(log)
+        
+        # Calculate averages and trends
+        analysis = {
+            "total_logs": len(symptom_logs),
+            "period_days": days,
+            "symptom_types": {},
+            "most_frequent": None,
+            "most_severe": None
+        }
+        
+        max_count = 0
+        max_severity = 0
+        
+        for symptom_type, data in symptom_types.items():
+            avg_severity = data["severity_sum"] / data["count"] if data["count"] > 0 else 0
+            frequency = data["count"] / days
+            
+            analysis["symptom_types"][symptom_type] = {
+                "count": data["count"],
+                "frequency": frequency,
+                "avg_severity": avg_severity
+            }
+            
+            if data["count"] > max_count:
+                max_count = data["count"]
+                analysis["most_frequent"] = symptom_type
+            
+            if avg_severity > max_severity:
+                max_severity = avg_severity
+                analysis["most_severe"] = symptom_type
+        
+        return analysis 

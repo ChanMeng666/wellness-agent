@@ -5,10 +5,12 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends, HTTPException, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from wellness_agent.agent import root_agent
@@ -41,6 +43,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Get the directory of the frontend static files
+frontend_dir = Path(__file__).parent.parent / "frontend" / "public"
+
+# Mount the static files directory
+app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 # Define request/response models
 class ChatMessage(BaseModel):
@@ -141,6 +149,44 @@ async def health_check() -> Dict[str, str]:
     Health check endpoint.
     """
     return {"status": "ok", "version": "0.1.0"}
+
+@app.get("/")
+async def serve_frontend():
+    """
+    Serve the frontend application.
+    """
+    return FileResponse(frontend_dir / "index.html")
+
+@app.get("/{path:path}")
+async def serve_frontend_paths(path: str):
+    """
+    Serve the frontend application for any route.
+    
+    This allows the frontend to handle client-side routing.
+    """
+    # First check if the file exists in the static directory
+    file_path = frontend_dir / path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path)
+    
+    # Otherwise, serve the index.html for client-side routing
+    return FileResponse(frontend_dir / "index.html")
+
+@app.get("/api/db/test-connection")
+async def test_database_connections() -> Dict[str, Any]:
+    """
+    Test database connections.
+    
+    This endpoint tests connections to Firestore and BigQuery.
+    """
+    from wellness_agent.db.test_connection import test_all_connections
+    
+    try:
+        results = test_all_connections()
+        return results
+    except Exception as e:
+        logger.error(f"Error testing database connections: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error testing database connections: {str(e)}")
 
 if __name__ == "__main__":
     # This is for development only. In production, use a proper ASGI server.

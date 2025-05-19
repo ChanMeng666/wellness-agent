@@ -7,6 +7,7 @@ from wellness_agent.db.firestore import FirestoreClient
 from wellness_agent.db.bigquery import BigQueryClient
 from wellness_agent.privacy.anonymizer import Anonymizer
 from wellness_agent.services.symptom_service import SymptomService
+from wellness_agent.services.db_service import DatabaseService
 
 class ServiceFactory:
     """Factory for creating and caching service instances."""
@@ -54,5 +55,19 @@ class ServiceFactory:
                 anonymizer=self.anonymizer
             )
         return self.services["symptom_service"]
+    
+    def get_database_service(self) -> DatabaseService:
+        """Get the database service instance.
+        
+        Returns:
+            DatabaseService instance
+        """
+        if "db_service" not in self.services:
+            self.services["db_service"] = DatabaseService(os.getenv("GOOGLE_CLOUD_PROJECT"))
+        return self.services["db_service"]
+    
+    def reset_services(self):
+        """Reset all cached service instances."""
+        self.services = {}
     
     # Add similar methods for other services 

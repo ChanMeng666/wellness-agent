@@ -193,4 +193,18 @@ class AccommodationService:
                 "employee_count": 42,
                 "time_period": time_period
             }
-        } 
+        }
+
+    def anonymize_request_data(self, request_data: List[Dict[str, Any]], user_privacy_settings: Dict[str, Any]) -> Dict[str, Any]:
+        """Anonymize accommodation request data for HR viewing.
+        
+        Args:
+            request_data: List of accommodation request data
+            user_privacy_settings: User privacy settings
+            
+        Returns:
+            Anonymized data
+        """
+        # Use the anonymizer to process the data
+        _, anonymized = self.anonymizer.anonymize_accommodation_data(request_data, user_privacy_settings)
+        return anonymized 

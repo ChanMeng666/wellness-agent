@@ -37,6 +37,8 @@ You can also use the search_tool to find relevant wellness information from repu
 When a user needs information that isn't in your knowledge base, consider using the search_tool to help them.
 """
 
+# Note: state_callback parameter has been removed as it's not supported in the current ADK version
+# The privacy callback functionality is now applied in the server.py file before calling the agent
 root_agent = Agent(
     name="wellness_support_agent",
     description="A comprehensive agent for workplace wellness that supports employees, HR, and employers with privacy-focused tools",
@@ -48,7 +50,6 @@ root_agent = Agent(
         employer_insights_tool,
         search_tool
     ],
-    state_callback=privacy_callback,
     generate_content_config=types.GenerateContentConfig(
         safety_settings=[
             types.SafetySetting(

@@ -3,7 +3,9 @@
 import os
 import json
 import logging
+import uuid
 from typing import Dict, Any, List, Optional
+from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -16,6 +18,7 @@ from pydantic import BaseModel, Field
 from wellness_agent.agent import root_agent
 from wellness_agent.privacy.callbacks import privacy_callback
 from wellness_agent.services.service_factory import ServiceFactory
+from wellness_agent.services.db.memory_service import MemoryService
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize service factory
 service_factory = ServiceFactory()
+
+# Initialize memory service
+memory_service = MemoryService()
 
 # Create the FastAPI app
 app = FastAPI(
@@ -60,9 +66,11 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = Field(None, description="User ID for context")
     user_role: Optional[str] = Field(None, description="User role (employee, hr, employer)")
     organization_id: Optional[str] = Field(None, description="Organization ID")
+    session_id: Optional[str] = Field(None, description="Session ID for continuity")
 
 class ChatResponse(BaseModel):
     response: str = Field(..., description="Agent response")
+    session_id: str = Field(..., description="Session ID for continuity")
     usage: Dict[str, Any] = Field({}, description="Token usage information")
 
 # Authentication dependency (simplified for demonstration)
@@ -116,18 +124,48 @@ async def chat_endpoint(
     Chat with the wellness agent.
     """
     try:
-        # Prepare the state with user information
-        state = {
-            "user_id": request.user_id or current_user["user_id"],
-            "user_role": request.user_role or current_user["role"],
-            "organization_id": request.organization_id or current_user["organization_id"]
-        }
+        # Get user information
+        user_id = request.user_id or current_user["user_id"]
+        user_role = request.user_role or current_user["role"]
+        organization_id = request.organization_id or current_user["organization_id"]
         
-        # Prepare messages in the required format
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        # Session management - either use existing or create new
+        session_id = request.session_id
+        session = None
+        
+        if session_id:
+            # Try to get existing session
+            session = memory_service.get_session(session_id)
+        
+        if not session:
+            # Create a new session
+            session_id = str(uuid.uuid4())
+            session = memory_service.create_new_session(user_id, user_role)
+            session_id = session.session_id
+        
+        # Prepare the state with user information and session
+        state = session.state if session.state else {}
+        
+        # Ensure basic information is in the state
+        state.update({
+            "user_id": user_id,
+            "user_role": user_role,
+            "organization_id": organization_id,
+            "session_id": session_id,
+            "system_time": datetime.now().isoformat()
+        })
+        
+        # Record the new message in the session history
+        session.add_message(
+            role=request.messages[-1].role,
+            content=request.messages[-1].content
+        )
         
         # Apply privacy callback to state
         state = privacy_callback(state)
+        
+        # Prepare messages in the required format
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
         # Call the agent
         response = root_agent.generate_content(
@@ -135,8 +173,21 @@ async def chat_endpoint(
             generation_config={"state": state}
         )
         
+        # Record the agent's response in the session history
+        session.add_message(
+            role="assistant",
+            content=response.text
+        )
+        
+        # Update the session state
+        session.update_state(state)
+        
+        # Save the updated session
+        memory_service.save_session(session)
+        
         return {
             "response": response.text,
+            "session_id": session_id,
             "usage": {}  # In a real implementation, we would track and return token usage
         }
     except Exception as e:
@@ -149,6 +200,71 @@ async def health_check() -> Dict[str, str]:
     Health check endpoint.
     """
     return {"status": "ok", "version": "0.1.0"}
+
+@app.get("/api/sessions/{user_id}")
+async def get_user_sessions(
+    user_id: str,
+    active_only: bool = True,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get all sessions for a user.
+    
+    This endpoint requires authentication and proper authorization.
+    """
+    # Simple authorization check
+    if current_user["user_id"] != user_id and current_user["role"] != "hr_manager":
+        raise HTTPException(status_code=403, detail="Not authorized to access these sessions")
+    
+    try:
+        sessions = memory_service.get_user_sessions(user_id, active_only)
+        return {
+            "user_id": user_id,
+            "sessions": [session.to_dict() for session in sessions]
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving user sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error retrieving user sessions: {str(e)}")
+
+@app.get("/api/symptom_logs/{user_id}")
+async def get_user_symptom_logs(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get symptom logs for a user.
+    
+    This endpoint requires authentication and proper authorization.
+    """
+    # Simple authorization check - users can only access their own logs, HR can access all
+    if current_user["user_id"] != user_id and current_user["role"] != "hr_manager":
+        raise HTTPException(status_code=403, detail="Not authorized to access these logs")
+    
+    try:
+        # Convert date strings to datetime objects if provided
+        start_datetime = datetime.fromisoformat(start_date) if start_date else None
+        end_datetime = datetime.fromisoformat(end_date) if end_date else None
+        
+        logs = memory_service.get_user_symptom_logs(
+            user_id=user_id,
+            start_date=start_datetime,
+            end_date=end_datetime
+        )
+        
+        # If HR is accessing employee logs, ensure they only see anonymized data
+        if current_user["user_id"] != user_id and current_user["role"] == "hr_manager":
+            logs = [log.anonymize() for log in logs]
+        
+        return {
+            "user_id": user_id if current_user["user_id"] == user_id else "anonymous",
+            "log_count": len(logs),
+            "logs": [log.to_dict() for log in logs]
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving symptom logs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error retrieving symptom logs: {str(e)}")
 
 @app.get("/")
 async def serve_frontend():

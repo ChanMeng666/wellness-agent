@@ -1,0 +1,45 @@
+{
+  "user_profile": {
+    "user_id": "employee_default",
+    "role": "employee",
+    "email": "employee@example.com",
+    "organization_id": "demo_org_456",
+    "privacy_level": "standard",
+    "symptom_tracking_enabled": true,
+    "notification_preferences": {
+      "daily_check_in": true,
+      "tips": true,
+      "reminders": false
+    }
+  },
+  "user_id": "employee_default",
+  "user_role": "employee",
+  "privacy_level": "standard",
+  "symptom_tracking_enabled": true,
+  "last_login": "2023-08-15T09:30:00",
+  "recent_symptoms": [
+    {
+      "date": "2023-08-14",
+      "symptom_emoji": "😣",
+      "symptom_rating": 7,
+      "symptom_tags": ["headache", "fatigue"]
+    },
+    {
+      "date": "2023-08-13",
+      "symptom_emoji": "😐",
+      "symptom_rating": 5,
+      "symptom_tags": ["mild discomfort", "fatigue"]
+    },
+    {
+      "date": "2023-08-12",
+      "symptom_emoji": "🙂",
+      "symptom_rating": 3,
+      "symptom_tags": ["feeling good", "mild fatigue"]
+    }
+  ],
+  "wellness_preferences": {
+    "preferred_break_time": "15 minutes",
+    "preferred_accommodations": ["flexible hours", "remote work"],
+    "notification_time": "09:00"
+  }
+} 

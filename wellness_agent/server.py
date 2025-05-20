@@ -213,6 +213,102 @@ async def chat_endpoint(
         # Get the latest user message
         latest_message = request.messages[-1].content
         
+        # Detect data tool requests in the message
+        data_request = None
+        if "department leave rate" in latest_message.lower() or "highest leave rate" in latest_message.lower():
+            try:
+                from wellness_agent.tools.data_tools import get_department_leave_rates
+                data_request = {
+                    "tool": "department_leave_rates",
+                    "data": get_department_leave_rates()
+                }
+                logger.info("Retrieved department leave rates from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving department leave rates: {str(e)}")
+                
+        elif "wellness program" in latest_message.lower() or "program effectiveness" in latest_message.lower():
+            try:
+                from wellness_agent.tools.data_tools import get_wellness_programs
+                data_request = {
+                    "tool": "wellness_programs",
+                    "data": get_wellness_programs()
+                }
+                logger.info("Retrieved wellness programs from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving wellness programs: {str(e)}")
+                
+        elif "health trend" in latest_message.lower() or "stress level trend" in latest_message.lower():
+            trend_type = "stress_levels"
+            if "work life" in latest_message.lower():
+                trend_type = "work_life_balance"
+            elif "physical" in latest_message.lower():
+                trend_type = "physical_activity"
+                
+            try:
+                from wellness_agent.tools.data_tools import get_health_trends
+                data_request = {
+                    "tool": "health_trends",
+                    "data": get_health_trends(trend_type=trend_type)
+                }
+                logger.info(f"Retrieved health trends for {trend_type} from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving health trends: {str(e)}")
+                
+        elif "policy" in latest_message.lower() or "leave policy" in latest_message.lower():
+            policy_type = "leave"
+            if "accommodation" in latest_message.lower():
+                policy_type = "accommodation"
+            elif "remote" in latest_message.lower() or "work from home" in latest_message.lower():
+                policy_type = "remote_work"
+                
+            try:
+                from wellness_agent.tools.data_tools import get_policy_document
+                data_request = {
+                    "tool": "policy_document",
+                    "data": get_policy_document(policy_type=policy_type)
+                }
+                logger.info(f"Retrieved policy document for {policy_type} from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving policy document: {str(e)}")
+        
+        # Prepare data tool information for the prompt
+        data_tools_instructions = """
+        When asked about company data, please use these functionalities:
+        
+        For HR Managers:
+        - You can access department leave rates with department_leave_rates_tool
+        - You can access wellness program effectiveness with wellness_programs_tool
+        - You can see health trends with health_trends_tool
+        - You can retrieve policy documents with policy_document_tool
+        
+        For Employers:
+        - You can analyze wellness ROI with wellness_report_tool
+        - You can compare departments with department_stats_tool
+        - You can view organization-wide trends with leave_trends_tool
+        
+        For Employees:
+        - You can access wellness guides with wellness_guide_tool
+        - You can find information about policies with policy_document_tool
+        
+        Always respect privacy: Never show individual employee data to HR or employers, only anonymized aggregated statistics.
+        """
+        
+        # Build the prompt
+        full_prompt = f"""You are a workplace wellness assistant. The user's role is: {user_role}.
+        
+        {data_tools_instructions}
+        
+        USER QUERY: {latest_message}
+        """
+        
+        # Include real data if retrieved
+        if data_request:
+            full_prompt += f"\n\nRESULT FROM {data_request['tool']}_tool:\n"
+            full_prompt += json.dumps(data_request['data'], indent=2)
+            full_prompt += "\n\nPlease respond based on this actual data from our database. Always present the information in a clear, organized way and explain what the data means."
+        else:
+            full_prompt += "\n\nFor data-related questions, please explain that you need to use specific tools to retrieve the data."
+        
         # Use a very simplified approach - direct to Gemini
         try:
             # Import vertexai for direct access
@@ -231,7 +327,7 @@ async def chat_endpoint(
                 
                 # Create the model
                 model = GenerativeModel("gemini-1.5-flash")
-                response_text = model.generate_content(latest_message).text
+                response_text = model.generate_content(full_prompt).text
                 
             else:
                 # Use Google AI Studio API key
@@ -239,7 +335,7 @@ async def chat_endpoint(
                 
                 # Create the model
                 model = genai.GenerativeModel("gemini-1.5-flash")
-                response = model.generate_content(latest_message)
+                response = model.generate_content(full_prompt)
                 response_text = response.text
                 
         except Exception as e:

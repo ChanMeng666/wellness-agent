@@ -213,9 +213,102 @@ async def chat_endpoint(
         # Get the latest user message
         latest_message = request.messages[-1].content
         
+        # Check if this is a simple confirmation of a previous suggestion
+        is_confirmation = False
+        previous_suggestion = None
+        
+        # Look for confirmation words in a short message
+        confirmation_words = ["yes", "sure", "ok", "okay", "please", "go ahead", "continue"]
+        if len(latest_message.split()) <= 3 and any(word in latest_message.lower() for word in confirmation_words):
+            # Look at previous messages to find what was suggested
+            if len(request.messages) >= 3:  # Need at least user, assistant, user
+                previous_assistant_msg = request.messages[-2].content.lower()
+                if "wellness_guide_tool" in previous_assistant_msg or "guide" in previous_assistant_msg:
+                    is_confirmation = True
+                    if "work-life balance" in previous_assistant_msg or "work life balance" in previous_assistant_msg:
+                        previous_suggestion = "work_life_balance"
+                    elif "stress" in previous_assistant_msg:
+                        previous_suggestion = "stress"
+                    elif "mental health" in previous_assistant_msg:
+                        previous_suggestion = "mental_health"
+                    else:
+                        previous_suggestion = "general_wellness"
+                    
+                    logger.info(f"Detected confirmation response to previous suggestion about: {previous_suggestion}")
+                    
+                elif "policy_document_tool" in previous_assistant_msg or "policy" in previous_assistant_msg:
+                    is_confirmation = True
+                    if "leave" in previous_assistant_msg:
+                        previous_suggestion = "leave_policy"
+                    elif "mental health" in previous_assistant_msg:
+                        previous_suggestion = "mental_health_leave"
+                    else:
+                        previous_suggestion = "general_policy"
+                    
+                    logger.info(f"Detected confirmation response to previous suggestion about: {previous_suggestion}")
+        
         # Detect data tool requests in the message
         data_request = None
-        if "department leave rate" in latest_message.lower() or "highest leave rate" in latest_message.lower():
+        
+        # If this is a confirmation of a previous suggestion, handle accordingly
+        if is_confirmation and previous_suggestion:
+            if previous_suggestion == "work_life_balance":
+                try:
+                    from wellness_agent.tools.data_tools import get_wellness_guide
+                    data_request = {
+                        "tool": "wellness_guide",
+                        "data": get_wellness_guide(guide_type="work_life_balance")
+                    }
+                    logger.info(f"Retrieved work-life balance guide based on user confirmation")
+                except Exception as e:
+                    logger.error(f"Error retrieving work-life balance guide: {str(e)}")
+                    
+            elif previous_suggestion == "stress":
+                try:
+                    from wellness_agent.tools.data_tools import get_wellness_guide
+                    data_request = {
+                        "tool": "wellness_guide",
+                        "data": get_wellness_guide(guide_type="stress")
+                    }
+                    logger.info(f"Retrieved stress management guide based on user confirmation")
+                except Exception as e:
+                    logger.error(f"Error retrieving stress guide: {str(e)}")
+                    
+            elif previous_suggestion == "mental_health":
+                try:
+                    from wellness_agent.tools.data_tools import get_wellness_guide
+                    data_request = {
+                        "tool": "wellness_guide",
+                        "data": get_wellness_guide(guide_type="mental_health")
+                    }
+                    logger.info(f"Retrieved mental health guide based on user confirmation")
+                except Exception as e:
+                    logger.error(f"Error retrieving mental health guide: {str(e)}")
+                    
+            elif previous_suggestion == "leave_policy" or previous_suggestion == "mental_health_leave":
+                try:
+                    from wellness_agent.tools.data_tools import get_policy_document
+                    data_request = {
+                        "tool": "policy_document",
+                        "data": get_policy_document(policy_type="leave")
+                    }
+                    logger.info(f"Retrieved leave policy based on user confirmation")
+                except Exception as e:
+                    logger.error(f"Error retrieving leave policy: {str(e)}")
+                    
+            elif previous_suggestion == "general_wellness":
+                try:
+                    from wellness_agent.tools.data_tools import get_wellness_guide
+                    data_request = {
+                        "tool": "wellness_guide",
+                        "data": get_wellness_guide(guide_type="general_wellness")
+                    }
+                    logger.info(f"Retrieved general wellness guide based on user confirmation")
+                except Exception as e:
+                    logger.error(f"Error retrieving general wellness guide: {str(e)}")
+                    
+        # Continue with the regular detection logic if no confirmation was handled
+        elif "department leave rate" in latest_message.lower() or "highest leave rate" in latest_message.lower():
             try:
                 from wellness_agent.tools.data_tools import get_department_leave_rates
                 data_request = {
@@ -258,10 +351,21 @@ async def chat_endpoint(
         elif ("stress" in latest_message.lower() and "resource" in latest_message.lower()) or \
              "feeling stressed" in latest_message.lower() or \
              "mental health resources" in latest_message.lower() or \
-             "wellness guide" in latest_message.lower():
-            guide_type = "stress"
-            if "work life" in latest_message.lower() or "balance" in latest_message.lower():
+             "wellness guide" in latest_message.lower() or \
+             ("work-life balance" in latest_message.lower() and "track" in latest_message.lower()) or \
+             ("work life balance" in latest_message.lower() and "track" in latest_message.lower()) or \
+             ("balance" in latest_message.lower() and "track" in latest_message.lower()) or \
+             ("track" in latest_message.lower() and "wellness" in latest_message.lower()):
+            
+            # Determine guide type based on the query
+            guide_type = "general_wellness"
+            
+            if "work life" in latest_message.lower() or "work-life" in latest_message.lower() or \
+               "balance" in latest_message.lower():
                 guide_type = "work_life_balance"
+                logger.info(f"Detected work-life balance tracking request: '{latest_message}'")
+            elif "stress" in latest_message.lower():
+                guide_type = "stress"
             elif "mental health" in latest_message.lower():
                 guide_type = "mental_health"
                 
@@ -393,6 +497,36 @@ async def chat_endpoint(
                         full_prompt += "HIGHLIGHTED SECTION ABOUT MENTAL HEALTH DAYS:\n"
                         full_prompt += mental_health_content + "\n\n"
                         full_prompt += "FULL POLICY DOCUMENT:\n"
+            
+            # For wellness guides with tracking requests, highlight the tracking information
+            elif data_request['tool'] == "wellness_guide" and "track" in latest_message.lower():
+                full_prompt += "When responding, focus on practical ways the user can track and improve their wellness.\n\n"
+                
+                # Process content to highlight tracking information if present
+                if 'content' in data_request['data'] and isinstance(data_request['data']['content'], str):
+                    content = data_request['data']['content']
+                    
+                    # Try to find and highlight tracking-related content
+                    tracking_keywords = ["track", "monitor", "journal", "diary", "log", "record", "measure"]
+                    lines = content.split('\n')
+                    tracking_content = []
+                    
+                    for i, line in enumerate(lines):
+                        if any(keyword in line.lower() for keyword in tracking_keywords):
+                            # Add this line and a couple surrounding lines for context
+                            start = max(0, i - 1)
+                            end = min(len(lines), i + 2)
+                            tracking_content.append('\n'.join(lines[start:end]))
+                    
+                    # If we found relevant content, prepend it as highlights
+                    if tracking_content:
+                        full_prompt += "HIGHLIGHTED TRACKING-RELATED SECTIONS:\n"
+                        full_prompt += "\n---\n".join(tracking_content) + "\n\n"
+                        full_prompt += "FULL GUIDE CONTENT:\n"
+                        
+                # Add specific instructions for work-life balance tracking
+                if "work life balance" in latest_message.lower() or "work-life balance" in latest_message.lower():
+                    full_prompt += "\nPresent the information as actionable steps for tracking work-life balance. Include concrete examples of tools or methods the user can use to track their balance.\n"
             
             # Add the full data
             full_prompt += json.dumps(data_request['data'], indent=2)

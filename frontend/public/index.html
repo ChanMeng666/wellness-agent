@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wellness Agent</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+        }
+        .chat-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1rem;
+            min-height: 400px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .chat-form {
+            display: flex;
+            margin-top: 1rem;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            font-size: 1rem;
+        }
+        .chat-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .user-role {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+        }
+        .role-selector {
+            padding: 0.5rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Wellness Agent</h1>
+            <p>Your privacy-focused workplace wellness assistant</p>
+        </div>
+        
+        <div class="user-role">
+            <label for="role">Select your role:</label>
+            <select id="role" class="role-selector">
+                <option value="employee">Employee</option>
+                <option value="hr_manager">HR Manager</option>
+                <option value="employer">Employer/Leadership</option>
+            </select>
+        </div>
+        
+        <div class="chat-container" id="chat-messages">
+            <p><strong>Wellness Agent:</strong> Hello! I'm your workplace wellness assistant. How can I help you today?</p>
+        </div>
+        
+        <form class="chat-form" id="chat-form">
+            <input type="text" class="chat-input" id="user-input" placeholder="Type your message here..." required>
+            <button type="submit" class="chat-button">Send</button>
+        </form>
+    </div>
+
+    <script>
+        // Store the session ID
+        let sessionId = null;
+        let messageHistory = [
+            {
+                role: "assistant",
+                content: "Hello! I'm your workplace wellness assistant. How can I help you today?"
+            }
+        ];
+        
+        document.getElementById('chat-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userInput = document.getElementById('user-input');
+            const chatMessages = document.getElementById('chat-messages');
+            const userRole = document.getElementById('role').value;
+            
+            // Get user message
+            const userMessage = userInput.value;
+            
+            // Clear input field
+            userInput.value = '';
+            
+            // Add user message to UI
+            chatMessages.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
+            
+            // Add to message history
+            messageHistory.push({
+                role: "user",
+                content: userMessage
+            });
+            
+            try {
+                // Send message to API in the format expected by the server
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        messages: messageHistory,
+                        user_role: userRole,
+                        session_id: sessionId
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                // Save the session ID for future requests
+                sessionId = data.session_id;
+                
+                // Add to message history
+                messageHistory.push({
+                    role: "assistant",
+                    content: data.response
+                });
+                
+                // Display bot response
+                chatMessages.innerHTML += `<p><strong>Wellness Agent:</strong> ${data.response}</p>`;
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                chatMessages.innerHTML += `<p><strong>Wellness Agent:</strong> Sorry, there was an error processing your request.</p>`;
+            }
+        });
+        
+        // Update role handling
+        document.getElementById('role').addEventListener('change', function() {
+            // Reset session when role changes
+            sessionId = null;
+            
+            const chatMessages = document.getElementById('chat-messages');
+            const userRole = this.value;
+            
+            // Clear messages
+            chatMessages.innerHTML = '';
+            
+            // Reset message history with appropriate greeting
+            let greeting = "Hello! I'm your workplace wellness assistant.";
+            
+            if (userRole === "employee") {
+                greeting += " How can I support your wellbeing today?";
+            } else if (userRole === "hr_manager") {
+                greeting += " How can I help you manage workplace wellness policies and programs?";
+            } else if (userRole === "employer") {
+                greeting += " How can I help you with organization-level wellness insights?";
+            }
+            
+            messageHistory = [
+                {
+                    role: "assistant",
+                    content: greeting
+                }
+            ];
+            
+            chatMessages.innerHTML = `<p><strong>Wellness Agent:</strong> ${greeting}</p>`;
+        });
+    </script>
+</body>
+</html> 

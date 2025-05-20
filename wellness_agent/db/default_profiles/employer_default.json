@@ -1,0 +1,53 @@
+{
+  "user_profile": {
+    "user_id": "employer_default",
+    "role": "employer",
+    "email": "ceo@example.com",
+    "organization_id": "demo_org_456",
+    "privacy_level": "standard",
+    "leadership_level": "executive",
+    "dashboard_access": ["overview", "trends", "roi"]
+  },
+  "user_id": "employer_default",
+  "user_role": "employer",
+  "privacy_level": "executive",
+  "last_login": "2023-08-16T10:15:00",
+  "wellness_initiatives": [
+    {
+      "name": "Mental Health Program",
+      "start_date": "2023-01-15",
+      "investment": 75000,
+      "status": "active"
+    },
+    {
+      "name": "Ergonomic Workspace Updates",
+      "start_date": "2023-03-10",
+      "investment": 45000,
+      "status": "active"
+    },
+    {
+      "name": "Flexible Work Policy",
+      "start_date": "2022-09-01",
+      "investment": 30000,
+      "status": "active"
+    }
+  ],
+  "roi_metrics": {
+    "absenteeism_reduction": 12,
+    "productivity_increase": 8,
+    "turnover_reduction": 15,
+    "healthcare_cost_savings": 7
+  },
+  "organizational_metrics": {
+    "total_employees": 450,
+    "departments": ["engineering", "marketing", "operations", "sales", "hr", "finance"],
+    "locations": ["headquarters", "remote", "satellite_office"],
+    "average_wellness_score": 76
+  },
+  "employer_preferences": {
+    "report_frequency": "monthly",
+    "visualization_type": "dashboard",
+    "primary_focus": "roi",
+    "notification_time": "07:30"
+  }
+} 

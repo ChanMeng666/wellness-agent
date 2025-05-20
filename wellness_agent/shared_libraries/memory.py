@@ -53,22 +53,21 @@ def memorize(key: str, value: str, tool_context: ToolContext) -> Dict[str, str]:
 
 def forget(key: str, value: str, tool_context: ToolContext) -> Dict[str, str]:
     """
-    Remove specific information from memory.
+    Remove a specific value from a list stored under the given key.
     
     Args:
-        key: the label indexing the memory where the value will be removed
-        value: the information to be removed
+        key: the label indexing the memory to remove from
+        value: the specific value to remove
         tool_context: The ADK tool context containing the state
         
     Returns:
         A status message dictionary
     """
     mem_dict = tool_context.state
-    if key in mem_dict and isinstance(mem_dict[key], list):
-        if value in mem_dict[key]:
-            mem_dict[key].remove(value)
-            return {"status": f'Removed "{key}": "{value}"'}
-    return {"status": f'Could not find "{value}" in "{key}" to remove'}
+    if key in mem_dict and isinstance(mem_dict[key], list) and value in mem_dict[key]:
+        mem_dict[key].remove(value)
+        return {"status": f'Removed "{value}" from "{key}"'}
+    return {"status": f'Could not find "{value}" in "{key}"'}
 
 def clear_memory_key(key: str, tool_context: ToolContext) -> Dict[str, str]:
     """
@@ -144,22 +143,35 @@ def load_user_profile(callback_context: CallbackContext):
     # Check if environment is set to use mock services
     use_mock = os.getenv("USE_MOCK_SERVICES", "false").lower() == "true"
     
+    # Check if a specific user role is specified in the query or state
+    user_role = callback_context.state.get("user_role", "employee")
+    
+    # Determine the appropriate profile path based on role
+    profile_path = DEFAULT_PROFILE_PATH
+    if user_role == "hr_manager":
+        profile_path = "wellness_agent/db/default_profiles/hr_default.json"
+    elif user_role == "employer":
+        profile_path = "wellness_agent/db/default_profiles/employer_default.json"
+    
+    # Override with environment variable if specified
+    profile_path = os.getenv("WELLNESS_AGENT_PROFILE", profile_path)
+    
     if use_mock:
         # Load from a JSON file for mock mode
         try:
-            with open(DEFAULT_PROFILE_PATH, "r") as file:
+            with open(profile_path, "r") as file:
                 data = json.load(file)
-                print(f"\nLoading Initial State from file: {DEFAULT_PROFILE_PATH}\n")
+                print(f"\nLoading Initial State for {user_role} from file: {profile_path}\n")
                 _set_initial_states(data, callback_context.state)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Error loading profile: {str(e)}")
             # Set minimal default state
-            _set_initial_states({"user_profile": {"user_role": "employee"}}, callback_context.state)
+            _set_initial_states({"user_profile": {"user_role": user_role}}, callback_context.state)
     else:
         # In production, load from database
         # This would be implemented to connect to your database
         # For now, we'll set a minimal default state
-        _set_initial_states({"user_profile": {"user_role": "employee"}}, callback_context.state)
+        _set_initial_states({"user_profile": {"user_role": user_role}}, callback_context.state)
 
 def sync_state_to_database(state: Dict[str, Any]) -> bool:
     """

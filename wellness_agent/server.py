@@ -19,6 +19,7 @@ from wellness_agent.agent import root_agent
 from wellness_agent.privacy.callbacks import privacy_callback
 from wellness_agent.services.service_factory import ServiceFactory
 from wellness_agent.services.db.memory_service import MemoryService
+from wellness_agent.shared_libraries.memory import _set_initial_states
 
 # Load environment variables
 load_dotenv()
@@ -115,6 +116,39 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
             "organization_id": os.getenv("DEMO_ORGANIZATION_ID", "demo_org_456")
         }
 
+def load_default_profile(user_role: str) -> Dict[str, Any]:
+    """
+    Load a default profile based on user role.
+    
+    Args:
+        user_role: The role of the user (employee, hr_manager, employer)
+        
+    Returns:
+        A dictionary with default profile data
+    """
+    # Determine the appropriate profile path based on role
+    if user_role == "hr_manager":
+        profile_path = "wellness_agent/db/default_profiles/hr_default.json"
+    elif user_role == "employer":
+        profile_path = "wellness_agent/db/default_profiles/employer_default.json"
+    else:  # Default to employee
+        profile_path = "wellness_agent/db/default_profiles/employee_default.json"
+    
+    # Try to load the profile
+    try:
+        with open(profile_path, "r") as file:
+            data = json.load(file)
+            logger.info(f"Loaded default profile for {user_role} from {profile_path}")
+            return data
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning(f"Error loading default profile: {e}")
+        # Return minimal default data
+        return {
+            "user_profile": {
+                "user_role": user_role
+            }
+        }
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(
     request: ChatRequest,
@@ -142,6 +176,18 @@ async def chat_endpoint(
             session_id = str(uuid.uuid4())
             session = memory_service.create_new_session(user_id, user_role)
             session_id = session.session_id
+            
+            # Load default profile data for new sessions
+            default_profile = load_default_profile(user_role)
+            
+            # Initialize the session state with the default profile
+            if not session.state:
+                session.state = {}
+            
+            # Use the memory module's function to properly set initial states
+            _set_initial_states(default_profile, session.state)
+            
+            logger.info(f"Created new session {session_id} for user {user_id} with role {user_role}")
         
         # Prepare the state with user information and session
         state = session.state if session.state else {}
@@ -164,19 +210,47 @@ async def chat_endpoint(
         # Apply privacy callback to state
         state = privacy_callback(state)
         
-        # Prepare messages in the required format
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        # Get the latest user message
+        latest_message = request.messages[-1].content
         
-        # Call the agent
-        response = root_agent.generate_content(
-            [messages[-1]],  # Just the latest message
-            generation_config={"state": state}
-        )
+        # Use a very simplified approach - direct to Gemini
+        try:
+            # Import vertexai for direct access
+            import google.generativeai as genai
+            
+            # Configure the API
+            if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
+                # Use VertexAI
+                import vertexai
+                from vertexai.generative_models import GenerativeModel
+                
+                # Initialize Vertex AI with project and location
+                project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "")
+                location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+                vertexai.init(project=project_id, location=location)
+                
+                # Create the model
+                model = GenerativeModel("gemini-1.5-flash")
+                response_text = model.generate_content(latest_message).text
+                
+            else:
+                # Use Google AI Studio API key
+                genai.configure(api_key=os.getenv("GOOGLE_API_KEY", ""))
+                
+                # Create the model
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(latest_message)
+                response_text = response.text
+                
+        except Exception as e:
+            logger.error(f"Error with direct Gemini call: {str(e)}")
+            # Fallback response
+            response_text = f"I'm having trouble connecting to the AI service. Please check your configuration and try again later. Error details: {str(e)}"
         
         # Record the agent's response in the session history
         session.add_message(
             role="assistant",
-            content=response.text
+            content=response_text
         )
         
         # Update the session state
@@ -186,7 +260,7 @@ async def chat_endpoint(
         memory_service.save_session(session)
         
         return {
-            "response": response.text,
+            "response": response_text,
             "session_id": session_id,
             "usage": {}  # In a real implementation, we would track and return token usage
         }

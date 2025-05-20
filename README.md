@@ -18,18 +18,38 @@ All while maintaining strict privacy controls and data protections.
 - Workplace-appropriate wellness tips
 - Privacy-controlled accommodation requests
 - Personal health trend insights
+- Personalized experiences through persistent memory
 
 ### For HR Managers
 - Anonymous wellness trend analysis
 - Streamlined accommodation management
 - Evidence-based policy suggestions
 - Privacy-compliant reporting tools
+- Organizational memory for policy continuity
 
 ### For Employers
 - Wellness ROI calculation
 - Workforce impact forecasting
 - Culture improvement resources
 - Anonymous organizational insights
+- Long-term trend memory for strategic planning
+
+## Memory System
+
+The agent includes a robust memory system that enhances user experience while preserving privacy:
+
+- **Persistent User Profiles**: Remembers user preferences, history, and wellness journey
+- **Context Retention**: Maintains conversation context between sessions
+- **Journey Tracking**: Follows users across their wellness journey with appropriate continuity
+- **Privacy-Preserving Storage**: Respects user privacy settings in what is remembered
+- **Role-Based Memory**: Different information is stored based on user role and permissions
+
+Memory functions include:
+- `memorize()`: Store single key-value pairs
+- `memorize_list()`: Append to a list of values under a key
+- `forget()`: Remove specific information
+- `get_memory()`: Retrieve stored information by key
+- `clear_memory_key()`: Erase an entire category of information
 
 ## Privacy Focus
 
@@ -39,6 +59,7 @@ This agent was built with privacy at its core:
 - Role-based access controls
 - Minimum group sizes for trend reports
 - User control over data sharing preferences
+- Memory system respects privacy settings
 
 ## Installation
 
@@ -71,6 +92,16 @@ This agent uses a hierarchical multi-agent system with:
 - Specialized sub-agents for different user roles
 - Custom privacy callbacks
 - Role-based tool access
+- Memory integration across all sub-agents
+
+### Memory Architecture
+
+The memory system is implemented with:
+- `shared_libraries/memory.py`: Core memory functions and utilities
+- Database integration for persistent storage
+- Privacy-aware memory access controls
+- Session state management for conversation continuity
+- Default profile loading for new users
 
 ## Development
 

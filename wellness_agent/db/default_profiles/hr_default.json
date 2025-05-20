@@ -1,0 +1,53 @@
+{
+  "user_profile": {
+    "user_id": "hr_default",
+    "role": "hr_manager",
+    "email": "hr@example.com",
+    "organization_id": "demo_org_456",
+    "privacy_level": "standard",
+    "managed_teams": ["engineering", "marketing"],
+    "hr_access_level": "manager",
+    "dashboard_access": true,
+    "notification_preferences": {
+      "accommodation_requests": true,
+      "policy_updates": true,
+      "wellness_reports": true
+    }
+  },
+  "user_id": "hr_default",
+  "user_role": "hr_manager",
+  "privacy_level": "standard",
+  "last_login": "2023-08-15T14:45:00",
+  "recent_policy_updates": [
+    {
+      "date": "2023-08-10",
+      "policy_name": "Remote Work Policy",
+      "status": "implemented"
+    },
+    {
+      "date": "2023-07-20",
+      "policy_name": "Wellness Program Guidelines",
+      "status": "under review"
+    }
+  ],
+  "anonymized_wellness_metrics": {
+    "department_participation": {
+      "engineering": 78,
+      "marketing": 65,
+      "operations": 82,
+      "sales": 70
+    },
+    "common_accommodation_requests": [
+      "flexible hours",
+      "remote work",
+      "ergonomic equipment",
+      "reduced meeting load"
+    ]
+  },
+  "hr_preferences": {
+    "report_frequency": "weekly",
+    "anonymization_threshold": 5,
+    "dashboard_view": "department",
+    "notification_time": "08:00"
+  }
+} 

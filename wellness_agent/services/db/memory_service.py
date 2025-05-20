@@ -45,112 +45,78 @@ class MemoryService:
             self._load_mock_data()
     
     def _load_mock_data(self) -> None:
-        """Load mock data from files for development."""
+        """Initialize the mock data store with empty collections."""
+        import uuid
+        from datetime import datetime
+        from wellness_agent.db.models.user import User
+        from wellness_agent.db.models.session import Session
+        from wellness_agent.db.models.symptoms_log import SymptomsLog
+        from wellness_agent.db.models.wellness_tip import WellnessTip
+        
+        # Initialize collections
+        self.mock_data = {
+            "users": {},
+            "sessions": {},
+            "symptom_logs": {},
+            "wellness_tips": {}
+        }
+        
         try:
-            # Create the default profiles directory if it doesn't exist
-            os.makedirs("wellness_agent/db/default_profiles", exist_ok=True)
+            # Create a demo user for the default employee role
+            demo_employee = User(
+                user_id="demo_profile_123",
+                role="employee",
+                email="demo.employee@example.com",
+                organization_id="demo_org_456",
+                privacy_level="standard"
+            )
             
-            # Load default wellness tips
-            tips_path = "wellness_agent/db/default_profiles/wellness_tips.json"
-            if not os.path.exists(tips_path):
-                # Create default wellness tips file if it doesn't exist
-                default_tips = [
-                    {
-                        "tip_id": str(uuid.uuid4()),
-                        "title": "Quick Desk Stretch",
-                        "description": "Take 2 minutes to stretch your neck and shoulders. Gently tilt your head to each side, roll your shoulders, and stretch your arms overhead.",
-                        "short_description": "2-minute desk stretch routine",
-                        "categories": ["ergonomics", "physical", "quick"],
-                        "symptom_tags": ["pain", "stiffness", "fatigue"],
-                        "difficulty_level": "easy",
-                        "time_required": "quick",
-                        "location_types": ["office", "home"],
-                        "is_verified": True
-                    },
-                    {
-                        "tip_id": str(uuid.uuid4()),
-                        "title": "Mindful Breathing",
-                        "description": "Take 5 deep breaths, inhaling for a count of 4, holding for 2, and exhaling for 6. Focus only on your breath.",
-                        "short_description": "5 mindful breaths at your desk",
-                        "categories": ["stress", "mental", "quick"],
-                        "symptom_tags": ["anxiety", "stress", "focus"],
-                        "difficulty_level": "easy",
-                        "time_required": "quick",
-                        "location_types": ["office", "home", "anywhere"],
-                        "is_verified": True
-                    }
-                ]
-                with open(tips_path, "w") as f:
-                    json.dump(default_tips, f, indent=2)
+            # Create a demo user for the HR manager role
+            demo_hr_manager = User(
+                user_id="demo_hr_manager_789",
+                role="hr_manager",
+                email="hr.manager@example.com",
+                organization_id="demo_org_456",
+                privacy_level="standard"
+            )
             
-            # Load tips if the file exists
-            if os.path.exists(tips_path):
-                with open(tips_path, "r") as f:
-                    tips_data = json.load(f)
-                    for tip_data in tips_data:
-                        tip = WellnessTip.from_dict(tip_data)
-                        self.mock_data["wellness_tips"][tip.tip_id] = tip
+            # Create a demo user for the employer role
+            demo_employer = User(
+                user_id="demo_employer_101",
+                role="employer",
+                email="employer.admin@example.com",
+                organization_id="demo_org_456",
+                privacy_level="standard"
+            )
             
-            # Load default employee profile
-            employee_path = "wellness_agent/db/default_profiles/employee_default.json"
-            if not os.path.exists(employee_path):
-                # Create default employee profile if it doesn't exist
-                default_employee = {
-                    "user_profile": {
-                        "user_id": "employee_default",
-                        "role": "employee",
-                        "email": "employee@example.com",
-                        "organization_id": "demo_org_456",
-                        "privacy_level": "standard",
-                        "symptom_tracking_enabled": True,
-                        "notification_preferences": {
-                            "daily_check_in": True,
-                            "tips": True,
-                            "reminders": False
-                        }
-                    }
-                }
-                with open(employee_path, "w") as f:
-                    json.dump(default_employee, f, indent=2)
+            # Store users with their user_id as the key
+            self.mock_data["users"][demo_employee.user_id] = demo_employee.to_dict()
+            self.mock_data["users"][demo_hr_manager.user_id] = demo_hr_manager.to_dict()
+            self.mock_data["users"][demo_employer.user_id] = demo_employer.to_dict()
             
-            # Load default HR manager profile
-            hr_path = "wellness_agent/db/default_profiles/hr_default.json"
-            if not os.path.exists(hr_path):
-                # Create default HR manager profile if it doesn't exist
-                default_hr = {
-                    "user_profile": {
-                        "user_id": "hr_default",
-                        "role": "hr_manager",
-                        "email": "hr@example.com",
-                        "organization_id": "demo_org_456",
-                        "privacy_level": "standard",
-                        "managed_teams": ["engineering", "marketing"],
-                        "hr_access_level": "manager"
-                    }
-                }
-                with open(hr_path, "w") as f:
-                    json.dump(default_hr, f, indent=2)
+            # Create a sample session (as a dictionary, not as a Session object)
+            sample_session = Session(
+                session_id=str(uuid.uuid4()),
+                user_id=demo_employee.user_id,
+                user_role=demo_employee.role,
+                is_active=True
+            )
+            self.mock_data["sessions"][sample_session.session_id] = sample_session.to_dict()
             
-            # Load default employer profile
-            employer_path = "wellness_agent/db/default_profiles/employer_default.json"
-            if not os.path.exists(employer_path):
-                # Create default employer profile if it doesn't exist
-                default_employer = {
-                    "user_profile": {
-                        "user_id": "employer_default",
-                        "role": "employer",
-                        "email": "ceo@example.com",
-                        "organization_id": "demo_org_456",
-                        "privacy_level": "standard",
-                        "leadership_level": "executive",
-                        "dashboard_access": ["overview", "trends", "roi"]
-                    }
-                }
-                with open(employer_path, "w") as f:
-                    json.dump(default_employer, f, indent=2)
-            
+            # Create a sample symptom log (as a dictionary)
+            sample_log = SymptomsLog(
+                log_id=str(uuid.uuid4()),
+                user_id=demo_employee.user_id,
+                timestamp=datetime.now(),
+                symptom_rating=3,
+                symptom_text="Mild headache",
+                energy_level=4,
+                stress_level=3,
+                privacy_level="standard"
+            )
+            self.mock_data["symptom_logs"][sample_log.log_id] = sample_log.to_dict()
         except Exception as e:
-            print(f"Error loading mock data: {str(e)}")
+            print(f"Error initializing mock data: {str(e)}")
     
     # User methods
     def get_user(self, user_id: str) -> Optional[User]:
@@ -206,8 +172,12 @@ class MemoryService:
             The session if found, None otherwise
         """
         if self.use_mock:
-            session_dict = self.mock_data["sessions"].get(session_id)
-            return Session.from_dict(session_dict) if session_dict else None
+            session = self.mock_data["sessions"].get(session_id)
+            # Check if the object is already a Session instance
+            if isinstance(session, Session):
+                return session
+            # Otherwise convert from dictionary
+            return Session.from_dict(session) if session else None
         else:
             doc_ref = self.db.collection("sessions").document(session_id)
             doc = doc_ref.get()
@@ -223,13 +193,14 @@ class MemoryService:
         Returns:
             True if successful, False otherwise
         """
-        session_dict = session.to_dict()
-        
         try:
             if self.use_mock:
+                # Store the session object directly
                 self.mock_data["sessions"][session.session_id] = session
                 return True
             else:
+                # Convert to dictionary for Firestore
+                session_dict = session.to_dict()
                 self.db.collection("sessions").document(session.session_id).set(session_dict)
                 return True
         except Exception as e:
@@ -249,10 +220,17 @@ class MemoryService:
         """
         if self.use_mock:
             sessions = []
-            for session in self.mock_data["sessions"].values():
-                if session.user_id == user_id:
-                    if not active_only or session.is_active:
-                        sessions.append(session)
+            for session_id, session in self.mock_data["sessions"].items():
+                # Check if it's already a Session object
+                if isinstance(session, Session):
+                    if session.user_id == user_id:
+                        if not active_only or session.is_active:
+                            sessions.append(session)
+                else:
+                    # It's a dictionary
+                    if session.get('user_id') == user_id:
+                        if not active_only or session.get('is_active', True):
+                            sessions.append(Session.from_dict(session))
             return sessions
         else:
             query = self.db.collection("sessions").where("user_id", "==", user_id)

@@ -253,13 +253,76 @@ async def chat_endpoint(
                 logger.info(f"Retrieved health trends for {trend_type} from real database")
             except Exception as e:
                 logger.error(f"Error retrieving health trends: {str(e)}")
+
+        # Add handling for wellness guides and resources
+        elif ("stress" in latest_message.lower() and "resource" in latest_message.lower()) or \
+             "feeling stressed" in latest_message.lower() or \
+             "mental health resources" in latest_message.lower() or \
+             "wellness guide" in latest_message.lower():
+            guide_type = "stress"
+            if "work life" in latest_message.lower() or "balance" in latest_message.lower():
+                guide_type = "work_life_balance"
+            elif "mental health" in latest_message.lower():
+                guide_type = "mental_health"
                 
-        elif "policy" in latest_message.lower() or "leave policy" in latest_message.lower():
+            try:
+                from wellness_agent.tools.data_tools import get_wellness_guide
+                data_request = {
+                    "tool": "wellness_guide",
+                    "data": get_wellness_guide(guide_type=guide_type)
+                }
+                logger.info(f"Retrieved wellness guide for {guide_type} from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving wellness guide: {str(e)}")
+        
+        # Add handling for listing available resources
+        elif "available resources" in latest_message.lower() or "what resources" in latest_message.lower():
+            resource_type = None
+            if "wellness" in latest_message.lower() or "guide" in latest_message.lower():
+                resource_type = "wellness_guides"
+            elif "policy" in latest_message.lower():
+                resource_type = "policy_documents"
+            elif "report" in latest_message.lower():
+                resource_type = "aggregated_reports"
+                
+            try:
+                from wellness_agent.tools.data_tools import list_available_resources
+                data_request = {
+                    "tool": "list_resources",
+                    "data": list_available_resources(resource_type=resource_type)
+                }
+                logger.info(f"Listed available resources with prefix {resource_type or 'all'} from real database")
+            except Exception as e:
+                logger.error(f"Error listing available resources: {str(e)}")
+                
+        # Enhanced policy detection with better recognition of mental health days
+        elif "policy" in latest_message.lower() or \
+             "leave policy" in latest_message.lower() or \
+             "mental health day" in latest_message.lower() or \
+             "mental health days" in latest_message.lower() or \
+             "entitled to" in latest_message.lower() or \
+             ("how many" in latest_message.lower() and "days" in latest_message.lower()) or \
+             ("time off" in latest_message.lower() and "mental" in latest_message.lower()):
+            
+            # Determine policy type based on the query
             policy_type = "leave"
+            
             if "accommodation" in latest_message.lower():
                 policy_type = "accommodation"
             elif "remote" in latest_message.lower() or "work from home" in latest_message.lower():
                 policy_type = "remote_work"
+            # Add better handling for specific leave types
+            elif "menstruation" in latest_message.lower() or "period" in latest_message.lower():
+                policy_type = "menstruation_leave"
+            elif "parental" in latest_message.lower() or "maternity" in latest_message.lower() or "paternity" in latest_message.lower():
+                policy_type = "parental_leave"
+            elif "sick" in latest_message.lower():
+                policy_type = "sick_leave"
+            elif "mental health" in latest_message.lower():
+                policy_type = "mental_health_leave"
+            
+            # Log more detailed information about the policy request
+            logger.info(f"Detected policy request: '{latest_message}' - Using policy type: {policy_type}")
                 
             try:
                 from wellness_agent.tools.data_tools import get_policy_document
@@ -304,8 +367,40 @@ async def chat_endpoint(
         # Include real data if retrieved
         if data_request:
             full_prompt += f"\n\nRESULT FROM {data_request['tool']}_tool:\n"
+            
+            # For policy documents with mental health days, highlight the specific information
+            if data_request['tool'] == "policy_document" and "mental health" in latest_message.lower():
+                full_prompt += "When responding, focus specifically on the mental health days information in the policy.\n\n"
+                
+                # Process content to highlight mental health days if present
+                if 'content' in data_request['data'] and isinstance(data_request['data']['content'], str):
+                    content = data_request['data']['content']
+                    
+                    # Try to find and highlight mental health days section
+                    lines = content.split('\n')
+                    mental_health_content = ""
+                    
+                    for i, line in enumerate(lines):
+                        if "mental health" in line.lower():
+                            # Add this line and a few surrounding lines for context
+                            start = max(0, i - 2)
+                            end = min(len(lines), i + 3)
+                            mental_health_content = '\n'.join(lines[start:end])
+                            break
+                    
+                    # If we found relevant content, prepend it as a highlight
+                    if mental_health_content:
+                        full_prompt += "HIGHLIGHTED SECTION ABOUT MENTAL HEALTH DAYS:\n"
+                        full_prompt += mental_health_content + "\n\n"
+                        full_prompt += "FULL POLICY DOCUMENT:\n"
+            
+            # Add the full data
             full_prompt += json.dumps(data_request['data'], indent=2)
             full_prompt += "\n\nPlease respond based on this actual data from our database. Always present the information in a clear, organized way and explain what the data means."
+            
+            # Additional guidance for specific query types
+            if "mental health day" in latest_message.lower() or "how many" in latest_message.lower():
+                full_prompt += "\n\nThe user is specifically asking about entitlement or quantity. Please provide a direct and clear answer about the number or amount if this information is available in the data."
         else:
             full_prompt += "\n\nFor data-related questions, please explain that you need to use specific tools to retrieve the data."
         

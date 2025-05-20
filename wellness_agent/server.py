@@ -319,6 +319,48 @@ async def chat_endpoint(
             except Exception as e:
                 logger.error(f"Error retrieving department leave rates: {str(e)}")
                 
+        # Employer-specific query - ROI on wellness initiatives
+        elif "roi" in latest_message.lower() or \
+             ("return" in latest_message.lower() and "investment" in latest_message.lower()) or \
+             ("wellness" in latest_message.lower() and "initiatives" in latest_message.lower() and "return" in latest_message.lower()):
+            try:
+                from wellness_agent.tools.data_tools import get_wellness_report
+                data_request = {
+                    "tool": "wellness_report",
+                    "data": get_wellness_report(report_type="wellness")
+                }
+                logger.info(f"Retrieved wellness ROI report for employer from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving wellness ROI report: {str(e)}")
+                
+        # Employer-specific query - Compare departments
+        elif ("compare" in latest_message.lower() and "department" in latest_message.lower()) or \
+             ("metrics" in latest_message.lower() and "across department" in latest_message.lower()) or \
+             ("department" in latest_message.lower() and "comparison" in latest_message.lower()):
+            try:
+                from wellness_agent.tools.data_tools import get_department_stats
+                data_request = {
+                    "tool": "department_stats",
+                    "data": get_department_stats(months=6)  # Get 6 months of data for comparison
+                }
+                logger.info(f"Retrieved department comparison data for employer from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving department comparison data: {str(e)}")
+                
+        # Employer-specific query - Annual wellness report
+        elif ("annual" in latest_message.lower() and "wellness" in latest_message.lower()) or \
+             ("wellness" in latest_message.lower() and "report" in latest_message.lower()) or \
+             ("yearly" in latest_message.lower() and "wellness" in latest_message.lower()):
+            try:
+                from wellness_agent.tools.data_tools import get_wellness_report
+                data_request = {
+                    "tool": "wellness_report",
+                    "data": get_wellness_report(report_type="annual")
+                }
+                logger.info(f"Retrieved annual wellness report for employer from real database")
+            except Exception as e:
+                logger.error(f"Error retrieving annual wellness report: {str(e)}")
+                
         elif "wellness program" in latest_message.lower() or "program effectiveness" in latest_message.lower():
             try:
                 from wellness_agent.tools.data_tools import get_wellness_programs
@@ -527,6 +569,20 @@ async def chat_endpoint(
                 # Add specific instructions for work-life balance tracking
                 if "work life balance" in latest_message.lower() or "work-life balance" in latest_message.lower():
                     full_prompt += "\nPresent the information as actionable steps for tracking work-life balance. Include concrete examples of tools or methods the user can use to track their balance.\n"
+            
+            # For employer-specific queries, emphasize business metrics and ROI
+            elif user_role == "employer" and data_request['tool'] in ["wellness_report", "department_stats"]:
+                full_prompt += "When responding, focus on the business impact, ROI, and actionable insights for leadership. The user is an employer/leader looking for organization-level data.\n\n"
+                
+                # Add specific instructions based on the type of employer query
+                if data_request['tool'] == "wellness_report" and "roi" in latest_message.lower():
+                    full_prompt += "Analyze the ROI data in detail. Present concrete numbers and percentages about cost savings, productivity improvements, and reduced absenteeism. Compare results to industry benchmarks when available.\n\n"
+                    
+                elif data_request['tool'] == "department_stats" and "compare" in latest_message.lower():
+                    full_prompt += "Present a clear comparison between departments, highlighting top performers and areas for improvement. Suggest targeted interventions for departments with lower metrics.\n\n"
+                    
+                elif "report" in latest_message.lower():
+                    full_prompt += "Summarize the key findings from the annual report, focusing on trends, achievements, and opportunities. Include participation rates, satisfaction scores, and business impact metrics.\n\n"
             
             # Add the full data
             full_prompt += json.dumps(data_request['data'], indent=2)

@@ -34,7 +34,7 @@ declare module 'next-auth/jwt' {
 const mockUser = {
   id: 'mock-user-id',
   name: 'Demo User',
-  email: 'demo@example.com',
+  email: 'chanmeng@sanicle.cloud',
   type: 'regular' as UserType,
   image: null
 };

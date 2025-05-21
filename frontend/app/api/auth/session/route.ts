@@ -4,7 +4,7 @@ export async function GET() {
     user: {
       id: 'mock-user-id',
       name: 'Demo User',
-      email: 'demo@example.com',
+      email: 'chanmeng@sanicle.cloud',
       image: null
     },
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now

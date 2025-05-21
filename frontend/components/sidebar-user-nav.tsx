@@ -29,7 +29,7 @@ const useSession = () => ({
   data: { 
     user: { 
       name: 'Demo User', 
-      email: 'demo@example.com',
+      email: 'chanmeng@sanicle.cloud',
       image: null
     }
   },

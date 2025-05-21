@@ -256,6 +256,7 @@ export function Chat({
               setMessages={setMessages}
               append={append}
               selectedVisibilityType={visibilityType}
+              userRole={userRole}
             />
           )}
         </form>

@@ -27,6 +27,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
+import type { UserRole } from './role-selector';
 
 function PureMultimodalInput({
   chatId,
@@ -42,6 +43,7 @@ function PureMultimodalInput({
   handleSubmit,
   className,
   selectedVisibilityType,
+  userRole,
 }: {
   chatId: string;
   input: UseChatHelpers['input'];
@@ -56,6 +58,7 @@ function PureMultimodalInput({
   handleSubmit: UseChatHelpers['handleSubmit'];
   className?: string;
   selectedVisibilityType: VisibilityType;
+  userRole: UserRole;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -223,13 +226,15 @@ function PureMultimodalInput({
         )}
       </AnimatePresence>
 
-      {messages.length === 0 &&
+      {(messages.length === 0 || 
+        (messages.length === 1 && messages[0].role === 'assistant')) &&
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
           <SuggestedActions
             append={append}
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
+            userRole={userRole}
           />
         )}
 
@@ -322,6 +327,7 @@ export const MultimodalInput = memo(
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
     if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
       return false;
+    if (prevProps.userRole !== nextProps.userRole) return false;
 
     return true;
   },

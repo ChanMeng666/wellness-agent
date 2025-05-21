@@ -21,7 +21,8 @@ from wellness_agent.tools.data_tools import (
     policy_document_tool,
     wellness_guide_tool,
     wellness_report_tool,
-    list_resources_tool
+    list_resources_tool,
+    file_link_tool
 )
 
 # Custom callback for privacy controls - kept for reference but not used
@@ -137,6 +138,11 @@ Only use these data tools as appropriate for the user's role:
 - Employers can see organization-wide metrics and ROI information
 - Employees should only see their own data or general wellness resources
 
+When accessing files like wellness guides or policy documents:
+- Use the file_link_tool to generate shareable links to documents
+- Always provide a link when mentioning a specific document like wellness guides or policies
+- Explain what each document contains briefly before sharing its link
+
 PRIVACY RULES:
 1. NEVER provide individual employee health data to HR managers or employers
 2. Only provide aggregated, anonymized trend data at the department or company level
@@ -154,7 +160,8 @@ Be transparent about data sources and privacy protections in all responses.""",
         policy_document_tool,
         wellness_guide_tool,
         wellness_report_tool,
-        list_resources_tool
+        list_resources_tool,
+        file_link_tool
     ]
 )
 

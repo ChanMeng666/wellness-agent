@@ -8,6 +8,7 @@ import json
 import csv
 import io
 import os
+import datetime
 from typing import Dict, List, Any, Optional
 
 # Set up logging
@@ -100,6 +101,78 @@ class StorageService:
             logger.error(f"Error listing resources: {str(e)}")
             return {"error": f"Could not list resources: {str(e)}"}
     
+    def generate_signed_url(self, blob_name: str, expiration_minutes: int = 60) -> Dict[str, Any]:
+        """
+        Generate a signed URL for a Cloud Storage blob that allows temporary access.
+        
+        Args:
+            blob_name: The name of the blob to generate a URL for
+            expiration_minutes: Number of minutes the URL should be valid for (default: 60)
+            
+        Returns:
+            Dict with signed URL information
+        """
+        try:
+            if not self.storage_client or not self.bucket:
+                logger.error("Storage client or bucket not initialized")
+                return {"error": "Storage service not properly initialized", "suggestion": "Check your Cloud Storage configuration"}
+                
+            blob = self.bucket.blob(blob_name)
+            logger.info(f"Generating signed URL for resource: {blob_name}")
+            
+            # First check if the blob exists
+            if not blob.exists():
+                logger.warning(f"Resource not found: {blob_name}")
+                return {
+                    "error": f"Resource not found: {blob_name}",
+                    "suggestion": "Check if the file exists in your Cloud Storage bucket or create it"
+                }
+            
+            # Generate a signed URL
+            expiration = datetime.timedelta(minutes=expiration_minutes)
+            try:
+                url = blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET"
+                )
+                logger.info(f"Generated signed URL for {blob_name}, valid for {expiration_minutes} minutes")
+                
+                # Determine the content type for the response
+                content_type = "application/octet-stream"  # Default
+                if blob_name.endswith('.md'):
+                    content_type = "text/markdown"
+                elif blob_name.endswith('.json'):
+                    content_type = "application/json"
+                elif blob_name.endswith('.csv'):
+                    content_type = "text/csv"
+                elif blob_name.endswith('.pdf'):
+                    content_type = "application/pdf"
+                elif blob_name.endswith('.txt'):
+                    content_type = "text/plain"
+                
+                return {
+                    "message": f"Generated signed URL for {blob_name}",
+                    "url": url,
+                    "expires_in_minutes": expiration_minutes,
+                    "content_type": content_type,
+                    "file_name": blob_name.split('/')[-1]  # Extract filename from path
+                }
+            except Exception as e:
+                logger.error(f"Error generating signed URL for {blob_name}: {str(e)}")
+                return {
+                    "error": f"Could not generate signed URL: {str(e)}",
+                    "suggestion": "Check your Google Cloud permissions and service account configuration"
+                }
+                
+        except Exception as e:
+            logger.error(f"Error generating signed URL for {blob_name}: {str(e)}")
+            return {
+                "error": f"Could not generate signed URL: {str(e)}",
+                "resource": blob_name,
+                "suggestion": "Check your Cloud Storage permissions and bucket configuration"
+            }
+    
     def get_resource_content(self, blob_name: str) -> Dict[str, Any]:
         """
         Get the content of a resource.
@@ -148,23 +221,35 @@ class StorageService:
                     "suggestion": "Check file permissions and file type"
                 }
             
+            # Generate a signed URL for the file
+            signed_url_info = self.generate_signed_url(blob_name)
+            has_url = "url" in signed_url_info
+            
             # Handle different file types
             if blob_name.endswith('.md'):
                 # Return markdown directly
-                return {
+                result = {
                     "message": f"Retrieved {blob_name}",
                     "content_type": "text/markdown",
                     "content": content
                 }
+                if has_url:
+                    result["url"] = signed_url_info["url"]
+                    result["expires_in_minutes"] = signed_url_info["expires_in_minutes"]
+                return result
             elif blob_name.endswith('.json'):
                 # Parse JSON
                 try:
                     data = json.loads(content)
-                    return {
+                    result = {
                         "message": f"Retrieved {blob_name}",
                         "content_type": "application/json",
                         "data": data
                     }
+                    if has_url:
+                        result["url"] = signed_url_info["url"]
+                        result["expires_in_minutes"] = signed_url_info["expires_in_minutes"]
+                    return result
                 except json.JSONDecodeError as json_error:
                     logger.error(f"Invalid JSON in {blob_name}: {str(json_error)}")
                     return {
@@ -177,12 +262,16 @@ class StorageService:
                 try:
                     csv_reader = csv.DictReader(io.StringIO(content))
                     rows = list(csv_reader)
-                    return {
+                    result = {
                         "message": f"Retrieved {blob_name}",
                         "content_type": "text/csv",
                         "headers": csv_reader.fieldnames,
                         "rows": rows
                     }
+                    if has_url:
+                        result["url"] = signed_url_info["url"]
+                        result["expires_in_minutes"] = signed_url_info["expires_in_minutes"]
+                    return result
                 except Exception as csv_error:
                     logger.error(f"Error parsing CSV in {blob_name}: {str(csv_error)}")
                     return {
@@ -192,11 +281,15 @@ class StorageService:
                     }
             else:
                 # Default to text
-                return {
+                result = {
                     "message": f"Retrieved {blob_name}",
                     "content_type": "text/plain",
                     "content": content
                 }
+                if has_url:
+                    result["url"] = signed_url_info["url"]
+                    result["expires_in_minutes"] = signed_url_info["expires_in_minutes"]
+                return result
                 
         except Exception as e:
             logger.error(f"Error retrieving resource {blob_name}: {str(e)}")
@@ -211,7 +304,7 @@ class StorageService:
         Find and retrieve a policy document by type.
         
         Args:
-            policy_type: Type of policy (e.g., "leave", "remote_work", "accommodation")
+            policy_type: Type of policy document (e.g., "leave", "remote_work")
             
         Returns:
             Dict with policy document content
@@ -221,104 +314,82 @@ class StorageService:
                 logger.error("Storage client or bucket not initialized")
                 return {"error": "Storage service not properly initialized", "suggestion": "Check your Cloud Storage configuration"}
                 
-            policy_prefix = "policy_documents/"
+            policies_prefix = "policy_documents/"
             logger.info(f"Looking for policy document with type: {policy_type}")
             
             # Try to list blobs to see if we have access
             try:
-                blobs = list(self.bucket.list_blobs(prefix=policy_prefix, max_results=10))
+                blobs = list(self.bucket.list_blobs(prefix=policies_prefix, max_results=10))
                 logger.info(f"Found {len(blobs)} policy document blobs")
             except Exception as e:
                 logger.error(f"Error listing policy documents: {str(e)}")
                 return {"error": f"Could not access policy documents: {str(e)}", "suggestion": "Check your Google Cloud credentials and permissions"}
-            
-            # Map of search terms to likely filenames - more comprehensive
-            policy_mapping = {
-                # General leave policies
-                "leave": "leave_policy.md",
-                "pto": "leave_policy.md",
-                "vacation": "leave_policy.md",
-                "time off": "leave_policy.md",
                 
-                # Specific leave types
-                "sick": "sick_leave_policy.md",
-                "illness": "sick_leave_policy.md",
-                "menstruation": "menstruation_leave_policy.md",
-                "period": "menstruation_leave_policy.md",
-                "menstrual": "menstruation_leave_policy.md",
-                "parental": "parental_leave_policy.md",
-                "maternity": "parental_leave_policy.md",
-                "paternity": "parental_leave_policy.md",
-                "mental health": "mental_health_leave_policy.md",
-                "mental health day": "mental_health_leave_policy.md", 
-                "mental health days": "mental_health_leave_policy.md",
-                "bereavement": "bereavement_leave_policy.md",
-                
-                # Other policy types
-                "remote": "remote_work_policy.md",
-                "work from home": "remote_work_policy.md",
-                "wfh": "remote_work_policy.md",
-                "accommodation": "accommodation_policy.md",
-                "disability": "accommodation_policy.md",
-                "ada": "accommodation_policy.md",
-                "wellness": "wellness_policy.md",
-                "health": "wellness_policy.md"
-            }
-            
-            # Normalize the policy type
+            # Normalize policy type for searching
             policy_type_lower = policy_type.lower()
             
-            # Look for an exact match in our mapping
+            # Look for any policy document that matches the type
             target_file = None
-            for key, filename in policy_mapping.items():
-                if key in policy_type_lower:
-                    candidate_file = policy_prefix + filename
-                    logger.info(f"Found potential policy match: {candidate_file}")
-                    
-                    # Check if this file actually exists
-                    blob = self.bucket.blob(candidate_file)
-                    if blob.exists():
-                        target_file = candidate_file
-                        logger.info(f"Verified policy file exists: {target_file}")
-                        break
-                    else:
-                        logger.warning(f"Mapped policy file does not exist: {candidate_file}")
             
-            # If no direct match found, try to find a policy document that contains the search term
+            # First try direct matching with policy type
+            for blob in blobs:
+                blob_name = blob.name.lower()
+                if blob_name.endswith('.keep'):
+                    continue
+                
+                # Check if policy type appears in the filename
+                if policy_type_lower in blob_name:
+                    target_file = blob.name
+                    logger.info(f"Found direct policy match: {target_file}")
+                    break
+            
+            # Try common policy synonyms if no direct match
             if not target_file:
-                logger.info("No direct mapping found, searching for partial matches in blob names")
-                for blob in blobs:
-                    if policy_type_lower in blob.name.lower():
-                        target_file = blob.name
-                        logger.info(f"Found partial match: {target_file}")
+                # Map of common policy terms to search
+                policy_synonyms = {
+                    "leave": ["leave", "absence", "time_off", "pto", "vacation"],
+                    "remote_work": ["remote", "wfh", "telework", "work_from_home"],
+                    "accommodation": ["accommodation", "disability", "ada", "accessibility"],
+                    "wellness": ["wellness", "health", "wellbeing", "benefits"]
+                }
+                
+                # See if our policy type matches any known categories
+                search_terms = []
+                for category, terms in policy_synonyms.items():
+                    if policy_type_lower in terms or category == policy_type_lower:
+                        search_terms = terms
                         break
+                
+                # If we have search terms, look for any matching policies
+                if search_terms:
+                    for blob in blobs:
+                        blob_name = blob.name.lower()
+                        if blob_name.endswith('.keep'):
+                            continue
+                            
+                        for term in search_terms:
+                            if term in blob_name:
+                                target_file = blob.name
+                                logger.info(f"Found policy match via synonym {term}: {target_file}")
+                                break
+                        
+                        if target_file:
+                            break
             
             # If we found a matching file, get its content
             if target_file:
                 logger.info(f"Retrieving content for policy document: {target_file}")
-                return self.get_resource_content(target_file)
+                result = self.get_resource_content(target_file)
+                # Add the file path to the result
+                result["file_path"] = target_file
+                return result
             else:
-                # Fallback mechanism for specific policy types
-                
-                # If looking for mental health policy, try the general leave policy
-                if "mental health" in policy_type_lower or "mental_health_leave" in policy_type_lower:
-                    logger.info(f"No specific mental health policy found, checking general leave policy")
-                    general_leave_policy = policy_prefix + "leave_policy.md"
-                    blob = self.bucket.blob(general_leave_policy)
-                    if blob.exists():
-                        logger.info(f"Using general leave policy for mental health days query: {general_leave_policy}")
-                        return self.get_resource_content(general_leave_policy)
-                
-                # If looking for specific leave type, fall back to the general leave policy
-                elif "leave" in policy_type_lower or "time off" in policy_type_lower:
-                    general_leave_policy = policy_prefix + "leave_policy.md"
-                    blob = self.bucket.blob(general_leave_policy)
-                    if blob.exists():
-                        logger.info(f"No specific leave policy found, using general leave policy: {general_leave_policy}")
-                        return self.get_resource_content(general_leave_policy)
-                
                 # List available policies for diagnostic purposes
-                available_policies = [blob.name.replace(policy_prefix, "") for blob in blobs if not blob.name.endswith('.keep')]
+                available_policies = [
+                    blob.name.replace(policies_prefix, "") 
+                    for blob in blobs 
+                    if not blob.name.endswith('.keep') and blob.name != policies_prefix
+                ]
                 logger.warning(f"No policy document found for '{policy_type}'. Available policies: {available_policies}")
                 
                 return {
@@ -357,70 +428,64 @@ class StorageService:
             except Exception as e:
                 logger.error(f"Error listing wellness guides: {str(e)}")
                 return {"error": f"Could not access wellness guides: {str(e)}", "suggestion": "Check your Google Cloud credentials and permissions"}
-            
-            # Map of search terms to likely filenames or directories - expanded
-            guide_mapping = {
-                # Mental health
-                "mental health": "mental_health/mental_health_guide.md",
-                "mental": "mental_health/mental_health_guide.md",
-                "stress": "mental_health/stress_management_guide.md",
-                "anxiety": "mental_health/anxiety_guide.md",
-                "depression": "mental_health/depression_guide.md",
                 
-                # Work-life balance
-                "work life balance": "work_life_balance/work_life_balance_guide.md",
-                "balance": "work_life_balance/work_life_balance_guide.md",
-                "burnout": "work_life_balance/burnout_prevention_guide.md",
-                
-                # Remote work
-                "remote work": "remote_work_guide.md",
-                "wfh": "remote_work_guide.md",
-                "home office": "remote_work_guide.md",
-                
-                # Physical wellness
-                "physical": "physical_wellness/physical_wellness_guide.md",
-                "exercise": "physical_wellness/exercise_guide.md",
-                "ergonomic": "physical_wellness/ergonomic_guide.md",
-                
-                # Other wellness areas
-                "nutrition": "nutrition_guide.md",
-                "sleep": "sleep_guide.md",
-                "meditation": "meditation_guide.md",
-                "mindfulness": "mindfulness_guide.md"
-            }
-            
-            # Normalize the guide type
+            # Look for guides that match the requested type
             guide_type_lower = guide_type.lower()
             
-            # Look for an exact match in our mapping
+            # First try exact match in a directory with the guide type name
             target_file = None
-            for key, filename in guide_mapping.items():
-                if key in guide_type_lower:
-                    candidate_file = guides_prefix + filename
-                    logger.info(f"Found potential guide match: {candidate_file}")
-                    
-                    # Check if this file actually exists
-                    blob = self.bucket.blob(candidate_file)
-                    if blob.exists():
-                        target_file = candidate_file
-                        logger.info(f"Verified guide file exists: {target_file}")
-                        break
-                    else:
-                        logger.warning(f"Mapped guide file does not exist: {candidate_file}")
             
-            # If no direct match found, try to find a guide that contains the search term
+            # Check for direct match in directory name
+            direct_match_prefix = f"{guides_prefix}{guide_type_lower}/"
+            direct_matches = [
+                blob.name for blob in blobs 
+                if blob.name.startswith(direct_match_prefix) and 
+                not blob.name.endswith('.keep') and 
+                "guide" in blob.name.lower()
+            ]
+            
+            if direct_matches:
+                target_file = direct_matches[0]
+                logger.info(f"Found direct directory match: {target_file}")
+            
+            # If no direct directory match, try to find a file with the guide type in its name
             if not target_file:
-                logger.info("No direct mapping found, searching for partial matches in blob names")
+                # Look for any guide that contains the guide_type in its name
                 for blob in blobs:
-                    if guide_type_lower in blob.name.lower() and not blob.name.endswith('.keep'):
+                    blob_name = blob.name.lower()
+                    # Skip directory markers and non-markdown files
+                    if blob_name.endswith('.keep') or not blob_name.endswith('.md'):
+                        continue
+                        
+                    # Look for the guide type in the filename
+                    # Prioritize filenames that explicitly mention guides
+                    if guide_type_lower in blob_name and "guide" in blob_name:
                         target_file = blob.name
-                        logger.info(f"Found partial match: {target_file}")
+                        logger.info(f"Found guide with type in filename: {target_file}")
                         break
+            
+            # If no guide with guide_type in name, try a more general approach
+            if not target_file:
+                for blob in blobs:
+                    blob_name = blob.name.lower()
+                    # Check if any part of the guide type is in any part of the filepath
+                    if not blob_name.endswith('.keep') and blob_name.endswith('.md'):
+                        path_parts = guide_type_lower.split('_')
+                        for part in path_parts:
+                            if part in blob_name and len(part) >= 4:  # Avoid matching too short terms
+                                target_file = blob.name
+                                logger.info(f"Found guide with partial match: {target_file}")
+                                break
+                        if target_file:
+                            break
             
             # If we found a matching file, get its content
             if target_file:
                 logger.info(f"Retrieving content for wellness guide: {target_file}")
-                return self.get_resource_content(target_file)
+                result = self.get_resource_content(target_file)
+                # Add the file path to the result
+                result["file_path"] = target_file
+                return result
             else:
                 # If no specific match, try a generic stress guide as fallback for stress-related queries
                 if "stress" in guide_type_lower or "anxiety" in guide_type_lower:
@@ -428,14 +493,18 @@ class StorageService:
                     blob = self.bucket.blob(generic_stress_guide)
                     if blob.exists():
                         logger.info(f"No specific guide found, using generic stress guide: {generic_stress_guide}")
-                        return self.get_resource_content(generic_stress_guide)
+                        result = self.get_resource_content(generic_stress_guide)
+                        result["file_path"] = generic_stress_guide
+                        return result
                     
                     # Try even more generic mental health guide
                     generic_mental_guide = guides_prefix + "mental_health/mental_health_guide.md"
                     blob = self.bucket.blob(generic_mental_guide)
                     if blob.exists():
                         logger.info(f"No specific guide found, using generic mental health guide: {generic_mental_guide}")
-                        return self.get_resource_content(generic_mental_guide)
+                        result = self.get_resource_content(generic_mental_guide)
+                        result["file_path"] = generic_mental_guide
+                        return result
                 
                 # List available guides for diagnostic purposes
                 available_guides = [
@@ -456,12 +525,13 @@ class StorageService:
             return {"error": f"Could not find wellness guide: {str(e)}", 
                     "suggestion": "Check the logs for more details and ensure your Cloud Storage bucket is properly configured."}
     
-    def get_report(self, report_type: str) -> Dict[str, Any]:
+    def get_report(self, report_type: str, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Retrieve an aggregated report by type.
+        Find and retrieve a report by type.
         
         Args:
-            report_type: Type of report (e.g., "wellness", "leave_trends")
+            report_type: Type of report (e.g., "wellness", "leave_trends", "department")
+            filters: Optional filters to apply to the report
             
         Returns:
             Dict with report content
@@ -481,116 +551,82 @@ class StorageService:
             except Exception as e:
                 logger.error(f"Error listing reports: {str(e)}")
                 return {"error": f"Could not access reports: {str(e)}", "suggestion": "Check your Google Cloud credentials and permissions"}
-            
-            # Map of search terms to filenames
-            report_mapping = {
-                "wellness": "annual_wellness_report.json",
-                "annual": "annual_wellness_report.json",
-                "roi": "roi_analysis.json",
-                "return on investment": "roi_analysis.json",
-                "leave": "leave_trends.csv",
-                "absence": "leave_trends.csv",
-                "time off": "leave_trends.csv",
-                "department": "department_wellness_metrics.csv",
-                "metrics": "department_wellness_metrics.csv",
-                "stats": "department_wellness_metrics.csv"
-            }
-            
-            # Normalize the report type
+                
+            # Normalize report type for searching
             report_type_lower = report_type.lower()
             
-            # Look for a match in our mapping
+            # Look for any report that matches the type
             target_file = None
-            for key, filename in report_mapping.items():
-                if key in report_type_lower:
-                    candidate_file = reports_prefix + filename
-                    logger.info(f"Found potential report match: {candidate_file}")
-                    
-                    # Check if this file actually exists
-                    blob = self.bucket.blob(candidate_file)
-                    if blob.exists():
-                        target_file = candidate_file
-                        logger.info(f"Verified report file exists: {target_file}")
-                        break
-                    else:
-                        logger.warning(f"Mapped report file does not exist: {candidate_file}")
             
-            # If no match found, try to find a report that contains the search term
-            if not target_file:
-                logger.info("No direct mapping found, searching for partial matches in blob names")
-                for blob in blobs:
-                    if report_type_lower in blob.name.lower():
-                        target_file = blob.name
-                        logger.info(f"Found partial match: {target_file}")
-                        break
+            # First try direct matching with report type
+            for blob in blobs:
+                blob_name = blob.name.lower()
+                if blob_name.endswith('.keep'):
+                    continue
+                
+                # Check if report type appears in the filename
+                if report_type_lower in blob_name:
+                    target_file = blob.name
+                    logger.info(f"Found direct report match: {target_file}")
+                    break
             
-            # If still no match, use a fallback for common employer queries
+            # If no direct match, try alternative terms
             if not target_file:
-                if "roi" in report_type_lower or "wellness" in report_type_lower or "annual" in report_type_lower:
-                    fallback_file = reports_prefix + "annual_wellness_report.json"
-                    blob = self.bucket.blob(fallback_file)
-                    if blob.exists():
-                        target_file = fallback_file
-                        logger.info(f"Using fallback annual report for employer query: {target_file}")
+                # Map of common report terms to search
+                report_synonyms = {
+                    "wellness": ["wellness", "wellbeing", "health"],
+                    "leave_trends": ["leave", "absence", "time_off"],
+                    "department": ["department", "team", "group"],
+                    "engagement": ["engagement", "satisfaction", "survey"],
+                    "roi": ["roi", "return", "investment", "financial"]
+                }
+                
+                # See if our report type matches any known categories
+                search_terms = []
+                for category, terms in report_synonyms.items():
+                    if report_type_lower in terms or category == report_type_lower:
+                        search_terms = terms
+                        break
+                
+                # If we have search terms, look for any matching reports
+                if search_terms:
+                    for blob in blobs:
+                        blob_name = blob.name.lower()
+                        if blob_name.endswith('.keep'):
+                            continue
+                            
+                        for term in search_terms:
+                            if term in blob_name:
+                                target_file = blob.name
+                                logger.info(f"Found report match via synonym {term}: {target_file}")
+                                break
+                        
+                        if target_file:
+                            break
             
             # If we found a matching file, get its content
             if target_file:
                 logger.info(f"Retrieving content for report: {target_file}")
-                return self.get_resource_content(target_file)
-            
-            # If no file found, return a helpful message with available reports
-            blobs = self.bucket.list_blobs(prefix=reports_prefix)
-            available_reports = [
-                blob.name.replace(reports_prefix, "") 
-                for blob in blobs 
-                if not blob.name.endswith('.keep')
-            ]
-            logger.warning(f"No report found for '{report_type}'. Available reports: {available_reports}")
-            
-            # If no actual reports found, return sample data for demo purposes
-            if not available_reports:
-                logger.warning("No reports found in bucket. Returning sample data for demo purposes.")
-                sample_data = {
-                    "message": "Sample data - No actual reports found in storage",
-                    "annual_wellness_report": {
-                        "roi": {
-                            "overall": "240%",
-                            "healthcare_savings": "$125,000",
-                            "productivity_increase": "12%",
-                            "absenteeism_reduction": "18%"
-                        },
-                        "program_participation": {
-                            "overall": "65%",
-                            "by_department": {
-                                "Engineering": "58%",
-                                "Marketing": "72%",
-                                "Sales": "62%",
-                                "Operations": "55%",
-                                "HR": "89%",
-                                "Finance": "51%"
-                            }
-                        },
-                        "satisfaction_scores": {
-                            "overall": 8.2,
-                            "by_program": {
-                                "Fitness Challenge": 8.7,
-                                "Mental Health Workshops": 8.1,
-                                "Ergonomic Assessments": 8.5,
-                                "Wellness App Subscription": 7.2,
-                                "Health Screenings": 8.3
-                            }
-                        }
-                    }
+                result = self.get_resource_content(target_file)
+                # Add the file path to the result
+                result["file_path"] = target_file
+                return result
+            else:
+                # List available reports for diagnostic purposes
+                available_reports = [
+                    blob.name.replace(reports_prefix, "") 
+                    for blob in blobs 
+                    if not blob.name.endswith('.keep') and blob.name != reports_prefix
+                ]
+                logger.warning(f"No report found for '{report_type}'. Available reports: {available_reports}")
+                
+                return {
+                    "message": f"No report found for '{report_type}'",
+                    "available_reports": available_reports,
+                    "suggestion": "You could create a report with this name and upload it to the Cloud Storage bucket."
                 }
-                return sample_data
-            
-            return {
-                "message": f"No report found for '{report_type}'",
-                "available_reports": available_reports,
-                "suggestion": "Try one of the available reports or upload a new one with this name"
-            }
                 
         except Exception as e:
-            logger.error(f"Error retrieving report: {str(e)}")
-            return {"error": f"Could not retrieve report: {str(e)}", 
+            logger.error(f"Error finding report: {str(e)}")
+            return {"error": f"Could not find report: {str(e)}", 
                     "suggestion": "Check the logs for more details and ensure your Cloud Storage bucket is properly configured."} 

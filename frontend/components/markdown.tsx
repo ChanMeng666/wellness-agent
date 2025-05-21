@@ -105,6 +105,50 @@ const components: Partial<Components> = {
       </h6>
     );
   },
+  table: ({ node, children, ...props }) => {
+    return (
+      <div className="my-4 w-full overflow-x-auto">
+        <table className="w-full border-collapse border border-gray-300 dark:border-gray-700" {...props}>
+          {children}
+        </table>
+      </div>
+    );
+  },
+  thead: ({ node, children, ...props }) => {
+    return (
+      <thead className="bg-gray-100 dark:bg-gray-800" {...props}>
+        {children}
+      </thead>
+    );
+  },
+  tbody: ({ node, children, ...props }) => {
+    return (
+      <tbody {...props}>
+        {children}
+      </tbody>
+    );
+  },
+  tr: ({ node, children, ...props }) => {
+    return (
+      <tr className="border-b border-gray-300 dark:border-gray-700" {...props}>
+        {children}
+      </tr>
+    );
+  },
+  th: ({ node, children, ...props }) => {
+    return (
+      <th className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left font-semibold" {...props}>
+        {children}
+      </th>
+    );
+  },
+  td: ({ node, children, ...props }) => {
+    return (
+      <td className="border border-gray-300 dark:border-gray-700 px-4 py-2" {...props}>
+        {children}
+      </td>
+    );
+  },
 };
 
 const remarkPlugins = [remarkGfm];

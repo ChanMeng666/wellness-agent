@@ -123,6 +123,32 @@
     }
 }
 
+/* Markdown表格样式 */
+.markdown-table {
+    @apply w-full my-4 overflow-x-auto;
+}
+
+.markdown-table table {
+    @apply w-full border-collapse border border-gray-300 dark:border-gray-700;
+}
+
+.markdown-table thead {
+    @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.markdown-table tr {
+    @apply border-b border-gray-300 dark:border-gray-700;
+}
+
+.markdown-table th,
+.markdown-table td {
+    @apply border border-gray-300 dark:border-gray-700 px-4 py-2;
+}
+
+.markdown-table th {
+    @apply text-left font-semibold;
+}
+
 .skeleton {
     * {
         pointer-events: none !important;

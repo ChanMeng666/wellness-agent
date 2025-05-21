@@ -42,6 +42,7 @@ export function Chat({
   const { mutate } = useSWRConfig();
   const [userRole, setUserRole] = useState<UserRole>('employee');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -105,6 +106,9 @@ export function Chat({
       // 将用户消息添加到UI
       setMessages((prev) => [...prev, userMessage]);
       
+      // 设置加载状态为true
+      setIsLoading(true);
+      
       // 直接使用fetch发送到后端的聊天API
       const response = await fetch('/api/direct-chat', {
         method: 'POST',
@@ -119,6 +123,9 @@ export function Chat({
       });
       
       const data = await response.json();
+      
+      // 设置加载状态为false
+      setIsLoading(false);
       
       if (response.ok) {
         // 保存会话ID
@@ -142,6 +149,8 @@ export function Chat({
         });
       }
     } catch (error) {
+      // 错误时也需要关闭加载状态
+      setIsLoading(false);
       console.error('Error sending message:', error);
       toast({
         type: 'error',
@@ -223,7 +232,7 @@ export function Chat({
 
         <Messages
           chatId={id}
-          status={status}
+          status={isLoading ? 'submitted' : status}
           votes={votes}
           messages={messages}
           setMessages={setMessages}
@@ -239,7 +248,7 @@ export function Chat({
               input={input}
               setInput={setInput}
               handleSubmit={handleSubmit}
-              status={status}
+              status={isLoading ? 'submitted' : status}
               stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
@@ -252,23 +261,7 @@ export function Chat({
         </form>
       </div>
 
-      <Artifact
-        chatId={id}
-        input={input}
-        setInput={setInput}
-        handleSubmit={originalHandleSubmit}
-        status={status}
-        stop={stop}
-        attachments={attachments}
-        setAttachments={setAttachments}
-        append={append}
-        messages={messages}
-        setMessages={setMessages}
-        reload={reload}
-        votes={votes}
-        isReadonly={isReadonly}
-        selectedVisibilityType={visibilityType}
-      />
+      {isArtifactVisible && <Artifact />}
     </>
   );
 }

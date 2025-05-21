@@ -257,26 +257,63 @@ export const ThinkingMessage = () => {
   return (
     <motion.div
       data-testid="message-assistant-loading"
-      className="w-full mx-auto max-w-3xl px-4 group/message min-h-96"
+      className="w-full mx-auto max-w-3xl px-4 group/message min-h-[100px]"
       initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
+      animate={{ y: 0, opacity: 1, transition: { delay: 0.5 } }}
       data-role={role}
     >
-      <div
-        className={cx(
-          'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
-          {
-            'group-data-[role=user]/message:bg-muted': true,
-          },
-        )}
-      >
+      <div className="flex gap-4 w-full">
         <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
           <SparklesIcon size={14} />
         </div>
 
         <div className="flex flex-col gap-2 w-full">
-          <div className="flex flex-col gap-4 text-muted-foreground">
-            Hmm...
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="loading-dots flex space-x-1">
+              <motion.div 
+                className="w-2 h-2 rounded-full bg-muted-foreground"
+                animate={{ 
+                  scale: [0.5, 1, 0.5],
+                  opacity: [0.3, 1, 0.3]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  times: [0, 0.5, 1],
+                  delay: 0
+                }}
+              />
+              <motion.div 
+                className="w-2 h-2 rounded-full bg-muted-foreground"
+                animate={{ 
+                  scale: [0.5, 1, 0.5],
+                  opacity: [0.3, 1, 0.3]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  times: [0, 0.5, 1],
+                  delay: 0.2
+                }}
+              />
+              <motion.div 
+                className="w-2 h-2 rounded-full bg-muted-foreground"
+                animate={{ 
+                  scale: [0.5, 1, 0.5],
+                  opacity: [0.3, 1, 0.3]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  times: [0, 0.5, 1],
+                  delay: 0.4
+                }}
+              />
+            </div>
+            <span className="text-sm">Thinking...</span>
           </div>
         </div>
       </div>

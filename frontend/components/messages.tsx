@@ -39,6 +39,12 @@ function PureMessages({
     status,
   });
 
+  // Determine if we should show the thinking message
+  const showThinkingMessage = 
+    status === 'submitted' && 
+    messages.length > 0 && 
+    messages[messages.length - 1].role === 'user';
+
   return (
     <div
       ref={messagesContainerRef}
@@ -66,9 +72,7 @@ function PureMessages({
         />
       ))}
 
-      {status === 'submitted' &&
-        messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
+      {showThinkingMessage && <ThinkingMessage />}
 
       <motion.div
         ref={messagesEndRef}

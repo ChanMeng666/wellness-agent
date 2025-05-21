@@ -20,7 +20,7 @@ const components: Partial<Components> = {
     }
     
     // Otherwise render as normal paragraph
-    return <p className="mb-4">{children}</p>;
+    return <p className="mb-4 break-words">{children}</p>;
   },
   ol: ({ node, children, ...props }) => {
     return (
@@ -54,7 +54,7 @@ const components: Partial<Components> = {
     return (
       // @ts-expect-error
       <Link
-        className="text-blue-500 hover:underline"
+        className="text-blue-500 hover:underline break-words break-all"
         target="_blank"
         rel="noreferrer"
         {...props}
@@ -155,7 +155,7 @@ const remarkPlugins = [remarkGfm];
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (
-    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+    <ReactMarkdown remarkPlugins={remarkPlugins} components={components} className="break-words">
       {children}
     </ReactMarkdown>
   );

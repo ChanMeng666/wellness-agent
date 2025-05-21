@@ -51,3 +51,5 @@ Thumbs.db
 .cursorignore
 /adk-docs
 /travel-concierge
+.env.20250521213944.bak
+wellness_agent/services/db/storage_service.py.20250521213944.bak

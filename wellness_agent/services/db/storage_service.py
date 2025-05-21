@@ -41,12 +41,20 @@ class StorageService:
                 # Use default fallback behavior
                 self.bucket = self.storage_client.bucket(bucket_name)
                 
+            # Store the credentials path for potential refreshing
+            self.credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if self.credentials_path:
+                logger.info(f"Using credentials from: {self.credentials_path}")
+            else:
+                logger.warning("GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
+                
         except Exception as e:
             logger.error(f"Error initializing StorageService: {str(e)}")
             # Keep a reference to avoid attribute errors, but operations will fail
             self.storage_client = None
             self.bucket_name = bucket_name
             self.bucket = None
+            self.credentials_path = None
     
     def list_resources(self, prefix: str = "") -> Dict[str, Any]:
         """
@@ -117,6 +125,15 @@ class StorageService:
                 logger.error("Storage client or bucket not initialized")
                 return {"error": "Storage service not properly initialized", "suggestion": "Check your Cloud Storage configuration"}
                 
+            # Refresh the storage client to ensure credentials are current
+            try:
+                self.storage_client = storage.Client()
+                self.bucket = self.storage_client.bucket(self.bucket_name)
+                logger.info(f"Storage client refreshed before generating signed URL")
+            except Exception as e:
+                logger.warning(f"Failed to refresh storage client: {str(e)}")
+                # Continue with existing client
+                
             blob = self.bucket.blob(blob_name)
             logger.info(f"Generating signed URL for resource: {blob_name}")
             
@@ -128,13 +145,14 @@ class StorageService:
                     "suggestion": "Check if the file exists in your Cloud Storage bucket or create it"
                 }
             
-            # Generate a signed URL
+            # Generate a signed URL with a longer expiration time to avoid timing issues
             expiration = datetime.timedelta(minutes=expiration_minutes)
             try:
                 url = blob.generate_signed_url(
                     version="v4",
                     expiration=expiration,
-                    method="GET"
+                    method="GET",
+                    credentials=self.storage_client._credentials
                 )
                 logger.info(f"Generated signed URL for {blob_name}, valid for {expiration_minutes} minutes")
                 

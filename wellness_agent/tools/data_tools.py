@@ -100,13 +100,19 @@ def get_policy_document(policy_type: str) -> Dict[str, Any]:
     # If the policy was found and has a file path, generate a signed URL
     if "error" not in policy_result and "file_path" in policy_result:
         file_path = policy_result["file_path"]
-        # Get a signed URL for the file
-        url_result = storage_service.generate_signed_url(file_path)
+        # Get a signed URL for the file - use a longer expiration time (120 minutes)
+        url_result = storage_service.generate_signed_url(file_path, expiration_minutes=120)
         
         if "url" in url_result:
             # Add the URL to the policy result
             policy_result["url"] = url_result["url"]
             policy_result["expires_in_minutes"] = url_result["expires_in_minutes"]
+            logger.info(f"Successfully generated signed URL for policy document: {policy_type}")
+        else:
+            # Log the error but still return the policy content
+            error_msg = url_result.get("error", "Unknown error generating signed URL")
+            logger.error(f"Failed to generate signed URL for policy {policy_type}: {error_msg}")
+            policy_result["url_error"] = error_msg
     
     return policy_result
 
@@ -196,13 +202,19 @@ def get_wellness_guide(guide_type: str) -> Dict[str, Any]:
     # If the guide was found and has a file path, generate a signed URL
     if "error" not in guide_result and "file_path" in guide_result:
         file_path = guide_result["file_path"]
-        # Get a signed URL for the file
-        url_result = storage_service.generate_signed_url(file_path)
+        # Get a signed URL for the file - use a longer expiration time (120 minutes)
+        url_result = storage_service.generate_signed_url(file_path, expiration_minutes=120)
         
         if "url" in url_result:
             # Add the URL to the guide result
             guide_result["url"] = url_result["url"]
             guide_result["expires_in_minutes"] = url_result["expires_in_minutes"]
+            logger.info(f"Successfully generated signed URL for wellness guide: {guide_type}")
+        else:
+            # Log the error but still return the guide content
+            error_msg = url_result.get("error", "Unknown error generating signed URL")
+            logger.error(f"Failed to generate signed URL for wellness guide {guide_type}: {error_msg}")
+            guide_result["url_error"] = error_msg
     
     return guide_result
 
@@ -217,7 +229,15 @@ def get_file_link(file_path: str) -> Dict[str, Any]:
         Dict containing the signed URL and metadata
     """
     logger.info(f"Generating link for file: {file_path}")
-    return storage_service.generate_signed_url(file_path)
+    # Use a longer expiration time for more reliability (120 minutes)
+    result = storage_service.generate_signed_url(file_path, expiration_minutes=120)
+    
+    if "error" in result:
+        logger.error(f"Failed to generate file link for {file_path}: {result.get('error')}")
+    else:
+        logger.info(f"Successfully generated signed URL for file: {file_path}")
+        
+    return result
 
 def get_wellness_report(report_type: str) -> Dict[str, Any]:
     """
@@ -236,13 +256,19 @@ def get_wellness_report(report_type: str) -> Dict[str, Any]:
     # If the report was found and has a file path, generate a signed URL
     if "error" not in report_result and "file_path" in report_result:
         file_path = report_result["file_path"]
-        # Get a signed URL for the file
-        url_result = storage_service.generate_signed_url(file_path)
+        # Get a signed URL for the file - use a longer expiration time (120 minutes)
+        url_result = storage_service.generate_signed_url(file_path, expiration_minutes=120)
         
         if "url" in url_result:
             # Add the URL to the report result
             report_result["url"] = url_result["url"]
             report_result["expires_in_minutes"] = url_result["expires_in_minutes"]
+            logger.info(f"Successfully generated signed URL for wellness report: {report_type}")
+        else:
+            # Log the error but still return the report content
+            error_msg = url_result.get("error", "Unknown error generating signed URL")
+            logger.error(f"Failed to generate signed URL for report {report_type}: {error_msg}")
+            report_result["url_error"] = error_msg
     
     return report_result
 

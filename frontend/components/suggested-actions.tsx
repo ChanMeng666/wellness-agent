@@ -7,74 +7,129 @@ import type { UseChatHelpers } from '@ai-sdk/react';
 import type { VisibilityType } from './visibility-selector';
 import type { UserRole } from './role-selector';
 import { CrossSmallIcon } from './icons';
+import { generateUUID } from '@/lib/utils';
+import { toast } from './toast';
+import type { UIMessage } from 'ai';
 
 interface SuggestedActionsProps {
   chatId: string;
-  append: UseChatHelpers['append'];
+  append?: UseChatHelpers['append']; // Make append optional
+  setParentMessages?: UseChatHelpers['setMessages']; // Add prop to update parent messages
+  setParentLoading?: (isLoading: boolean) => void; // Add prop to control parent loading state
   selectedVisibilityType: VisibilityType;
   userRole: UserRole;
 }
 
-// Key for localStorage to remember if suggestions are hidden
-const getSuggestionsHiddenKey = (userRole: UserRole) => `wellness-agent-suggestions-hidden-${userRole}`;
-
 function PureSuggestedActions({
   chatId,
   append,
+  setParentMessages,
+  setParentLoading,
   selectedVisibilityType,
   userRole,
 }: SuggestedActionsProps) {
-  // Track whether suggestions are visible
-  const [isSuggestionsVisible, setIsSuggestionsVisible] = useState(true);
-
-  // Load hidden preference from localStorage on mount and when userRole changes
-  useEffect(() => {
-    const hiddenState = localStorage.getItem(getSuggestionsHiddenKey(userRole));
-    if (hiddenState === 'true') {
-      setIsSuggestionsVisible(false);
-    } else {
-      setIsSuggestionsVisible(true);
-    }
-  }, [userRole]);
-
-  // Handle closing the suggestions
-  const handleCloseSuggestions = () => {
-    setIsSuggestionsVisible(false);
-    localStorage.setItem(getSuggestionsHiddenKey(userRole), 'true');
-  };
+  // Track loading state
+  const [isLoading, setIsLoading] = useState(false);
+  // Track current session ID
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  // Track messages for direct-chat API
+  const [messages, setMessages] = useState<any[]>([]);
   
-  // Handle showing the suggestions again
-  const handleShowSuggestions = () => {
-    setIsSuggestionsVisible(true);
-    localStorage.removeItem(getSuggestionsHiddenKey(userRole));
-  };
+  // 确保没有副作用在组件挂载时运行
+  // 所有逻辑只有在用户明确点击推荐问题时才会执行
 
-  // If suggestions are hidden, show a button to display them again
-  if (!isSuggestionsVisible) {
-    return (
-      <div className="flex justify-center w-full mb-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleShowSuggestions}
-          className="text-sm flex items-center gap-1 px-4 py-2 border-dashed"
-        >
-          <svg 
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor" 
-            strokeWidth="1.5"
-            className="mr-1"
-          >
-            <path d="M8 4V12M4 8H12" strokeLinecap="round" />
-          </svg>
-          <span>Show suggested questions</span>
-        </Button>
-      </div>
-    );
-  }
+  // Direct chat API handler
+  const handleSuggestedAction = async (content: string) => {
+    if (isLoading) return;
+    
+    try {
+      // Set local loading state
+      setIsLoading(true);
+      
+      // Set parent loading state if available
+      if (setParentLoading) {
+        setParentLoading(true);
+      }
+      
+      // Create user message
+      const userMessage = { 
+        role: 'user' as const, 
+        content,
+        id: generateUUID(),
+        createdAt: new Date(),
+      };
+      
+      // Update the local state directly instead of using append
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      
+      // Add message to parent state right away for immediate UI feedback
+      if (setParentMessages) {
+        setParentMessages((prev) => [...prev, userMessage as UIMessage]);
+      }
+      
+      // Send to direct-chat API
+      const response = await fetch('/api/direct-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          user_role: userRole,
+          session_id: sessionId
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Save session ID for subsequent requests
+        setSessionId(data.session_id);
+        
+        // Add bot response to messages
+        const assistantMessage = { 
+          role: 'assistant', 
+          content: data.response,
+          id: generateUUID(),
+          createdAt: new Date()
+        };
+        
+        setMessages([...updatedMessages, assistantMessage]);
+        
+        // Add bot response to parent state for UI
+        if (setParentMessages) {
+          setParentMessages((prev) => [...prev, assistantMessage as UIMessage]);
+        } 
+        // Only use URL redirect if no parent state management available
+        else if (!append) {
+          // If no state management available, redirect
+          window.location.href = `/chat/${chatId}?message=${encodeURIComponent(content)}&response=${encodeURIComponent(data.response)}`;
+        }
+        // Removed the append calls to prevent duplicate messages
+      } else {
+        // Error handling
+        toast({
+          type: 'error',
+          description: data.error || 'Failed to process your request',
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        type: 'error',
+        description: 'Failed to connect to the server',
+      });
+    } finally {
+      // Reset local loading state
+      setIsLoading(false);
+      
+      // Reset parent loading state if available
+      if (setParentLoading) {
+        setParentLoading(false);
+      }
+    }
+  };
 
   // Employee-specific questions
   const employeeQuestions = [
@@ -156,19 +211,6 @@ function PureSuggestedActions({
 
   return (
     <div className="relative w-full">
-      {/* Close button - redesigned to be more obvious */}
-      <div className="flex justify-end w-full mb-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCloseSuggestions}
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-        >
-          <CrossSmallIcon size={12} />
-          <span>Hide suggestions</span>
-        </Button>
-      </div>
-    
       <div
         data-testid="suggested-actions"
         className="grid sm:grid-cols-2 gap-2 w-full"
@@ -184,14 +226,15 @@ function PureSuggestedActions({
           >
             <Button
               variant="ghost"
-              onClick={async () => {
+              onClick={(e) => {
+                // 阻止事件冒泡和默认行为
+                e.preventDefault();
+                e.stopPropagation();
+                // 更新URL并发送请求
                 window.history.replaceState({}, '', `/chat/${chatId}`);
-
-                append({
-                  role: 'user',
-                  content: suggestedAction.action,
-                });
+                handleSuggestedAction(suggestedAction.action);
               }}
+              disabled={isLoading}
               className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
             >
               <span className="font-medium">{suggestedAction.title}</span>

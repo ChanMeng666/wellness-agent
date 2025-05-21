@@ -161,8 +161,11 @@ export function Chat({
 
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
+  const message = searchParams.get('message');
+  const response = searchParams.get('response');
 
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+  const [hasAppendedMessageResponse, setHasAppendedMessageResponse] = useState(false);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {
@@ -175,6 +178,26 @@ export function Chat({
       window.history.replaceState({}, '', `/chat/${id}`);
     }
   }, [query, append, hasAppendedQuery, id]);
+
+  // Handle message and response from suggested actions
+  useEffect(() => {
+    if (message && response && !hasAppendedMessageResponse) {
+      // First add the user message
+      append({
+        role: 'user',
+        content: message,
+      });
+      
+      // Then add the assistant response
+      append({
+        role: 'assistant',
+        content: response,
+      });
+
+      setHasAppendedMessageResponse(true);
+      window.history.replaceState({}, '', `/chat/${id}`);
+    }
+  }, [message, response, append, hasAppendedMessageResponse, id]);
 
   const { data: votes } = useSWR<Array<Vote>>(
     messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
@@ -248,10 +271,12 @@ export function Chat({
               input={input}
               setInput={setInput}
               handleSubmit={handleSubmit}
-              status={isLoading ? 'submitted' : status}
-              stop={stop}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
               attachments={attachments}
               setAttachments={setAttachments}
+              status={status}
+              stop={stop}
               messages={messages}
               setMessages={setMessages}
               append={append}

@@ -3,6 +3,35 @@ export async function POST(request: Request) {
     // Get the request body
     const body = await request.json();
     
+    // 检查消息是否为空
+    if (!body.messages || body.messages.length === 0) {
+      console.error('No messages in request:', body);
+      return new Response(
+        JSON.stringify({ error: 'No messages provided' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+    
+    // 检查最后一条消息是否有内容
+    const lastMessage = body.messages[body.messages.length - 1];
+    if (!lastMessage || !lastMessage.content || lastMessage.content.trim() === '') {
+      console.error('Last message has no content:', body);
+      return new Response(
+        JSON.stringify({ error: 'Last message has no content' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+    
     // 确保包含用户角色信息
     if (!body.user_role) {
       console.error('Missing user_role parameter in request:', body);

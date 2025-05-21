@@ -32,11 +32,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               onClick={() => {
                 setOpenMobile(false);
               }}
-              className="flex flex-row gap-3 items-center"
+              className="flex flex-row gap-3 items-center px-2 hover:bg-muted rounded-md cursor-pointer"
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
-              </span>
+              <span className="text-lg font-semibold">Wellness Agent</span>
             </Link>
             <Tooltip>
               <TooltipTrigger asChild>

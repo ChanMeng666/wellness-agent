@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWindowSize } from 'usehooks-ts';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 import { ModelSelector } from '@/components/model-selector';
 import { SidebarToggle } from '@/components/sidebar-toggle';
@@ -36,10 +37,24 @@ function PureChatHeader({
 }) {
   const router = useRouter();
   const { open } = useSidebar();
-  const { width: windowWidth } = useWindowSize();
+  const [isMounted, setIsMounted] = useState(false);
+  const [showNewChatButton, setShowNewChatButton] = useState(true);
   
   // Initialize with a stable value for server-side rendering
   const [selectedRole, setSelectedRole] = useState<UserRole>('employee');
+  
+  // After component mounts, check window size
+  useEffect(() => {
+    setIsMounted(true);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setShowNewChatButton(!open || width < 768);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [open]);
   
   // After component mounts, hydrate with localStorage value if available
   useEffect(() => {
@@ -66,10 +81,23 @@ function PureChatHeader({
     <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2">
       <SidebarToggle />
 
-      {(!open || windowWidth < 768) && (
+      {/* Add Sanicle logo in header */}
+      <div className="hidden md:flex items-center gap-2">
+        <Image
+          src="/logo/sanicle_logo.svg"
+          alt="Sanicle Logo"
+          width={100}
+          height={100}
+          className="min-w-[28px]"
+        />
+      </div>
+
+      {/* Only render the button client-side after component is mounted */}
+      {isMounted && showNewChatButton && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
+              type="button"
               variant="outline"
               className="order-2 md:order-1 px-3 md:h-fit ml-auto md:ml-0"
               onClick={() => {

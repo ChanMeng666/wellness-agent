@@ -19,6 +19,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
+import Image from 'next/image';
 
 const PurePreviewMessage = ({
   chatId,
@@ -61,9 +62,12 @@ const PurePreviewMessage = ({
         >
           {message.role === 'assistant' && (
             <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-              <div className="translate-y-px">
-                <SparklesIcon size={14} />
-              </div>
+              <Image 
+                src="/logo/leave-green.svg"
+                alt="AI Assistant"
+                width={20}
+                height={20}
+              />
             </div>
           )}
 
@@ -263,8 +267,13 @@ export const ThinkingMessage = () => {
       data-role={role}
     >
       <div className="flex gap-4 w-full">
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
-          <SparklesIcon size={14} />
+        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+          <Image 
+            src="/logo/leave-green.svg"
+            alt="AI Assistant"
+            width={20}
+            height={20}
+          />
         </div>
 
         <div className="flex flex-col gap-2 w-full">

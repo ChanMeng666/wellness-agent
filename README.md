@@ -290,6 +290,10 @@ graph TD
 
 ### Backend Development Server
 
+```python
+python run_dev_server.py
+```
+
 Run the development UI:
 ```bash
 cd wellness-agent

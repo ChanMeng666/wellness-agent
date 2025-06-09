@@ -82,7 +82,7 @@ function PureChatHeader({
       <SidebarToggle />
 
       {/* Add Sanicle logo in header */}
-      <div className="hidden md:flex items-center gap-2">
+      {/* <div className="hidden md:flex items-center gap-2">
         <Image
           src="/logo/sanicle_logo.svg"
           alt="Sanicle Logo"
@@ -90,7 +90,7 @@ function PureChatHeader({
           height={100}
           className="min-w-[28px]"
         />
-      </div>
+      </div> */}
 
       {/* Only render the button client-side after component is mounted */}
       {isMounted && showNewChatButton && (

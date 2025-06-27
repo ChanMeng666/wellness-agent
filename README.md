@@ -93,7 +93,7 @@ A comprehensive AI-powered workplace wellness agent that leverages Google's Agen
   - [🧪 Testing](#-testing-1)
   - [🤝 Contributing](#-contributing)
   - [📄 License](#-license)
-  - [👥 Author](#-author)
+  - [�‍♀️ Author](#️-author)
 
 ## 🛠️ Tech Stack
 
@@ -884,13 +884,12 @@ npm run dev
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Author
+## 🙋‍♀️ Author
 
-**Wellness Agent Contributors**
-- 📧 Email: example@example.com
-- 🌐 Documentation: [View Full Documentation](#getting-started)
-- 🐛 Issues: [Report Issues](https://github.com/ChanMeng666/wellness-agent/issues)
-- 💡 Features: [Request Features](https://github.com/ChanMeng666/wellness-agent/issues/new)
+**Chan Meng** - Senior AI/ML Infrastructure Engineer
+- <img src="https://cdn.simpleicons.org/linkedin/0A66C2" width="16" height="16"> LinkedIn: [chanmeng666](https://www.linkedin.com/in/chanmeng666/)
+- <img src="https://cdn.simpleicons.org/github/181717" width="16" height="16"> GitHub: [ChanMeng666](https://github.com/ChanMeng666)
+- <img src="https://cdn.simpleicons.org/gmail/EA4335" width="16" height="16"> Email: chanmeng.dev@gmail.com
 
 ---
 

@@ -26,7 +26,7 @@ A comprehensive AI-powered workplace wellness agent that leverages Google's Agen
 
 <br/>
 
-[![🚀 Visit Documentation 🚀](https://gradient-svg-generator.vercel.app/api/svg?text=%F0%9F%9A%80Visit%20Documentation%F0%9F%9A%80&color=000000&height=60&gradientType=radial&duration=6s&color0=ffffff&template=pride-rainbow)]([#getting-started](https://sanicle-wellness-agent-2lxj5uw.gamma.site/))
+[![🚀 Visit Documentation 🚀](https://gradient-svg-generator.vercel.app/api/svg?text=%F0%9F%9A%80Visit%20Documentation%F0%9F%9A%80&color=000000&height=60&gradientType=radial&duration=6s&color0=ffffff&template=pride-rainbow)](https://sanicle-wellness-agent-2lxj5uw.gamma.site/)
 
 <br/>
 

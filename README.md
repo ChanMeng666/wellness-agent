@@ -93,7 +93,7 @@ A comprehensive AI-powered workplace wellness agent that leverages Google's Agen
   - [🧪 Testing](#-testing-1)
   - [🤝 Contributing](#-contributing)
   - [📄 License](#-license)
-  - [�‍♀️ Author](#️-author)
+  - [🙋‍♀️ Author](#️-author)
 
 ## 🛠️ Tech Stack
 
@@ -519,11 +519,11 @@ graph LR
     A --> C[Storage Layer]
     A --> D[Privacy Controls]
     
-    B --> B1[memorize()]
-    B --> B2[memorize_list()]
-    B --> B3[forget()]
-    B --> B4[get_memory()]
-    B --> B5[clear_memory_key()]
+    B --> B1["memorize()"]
+    B --> B2["memorize_list()"]
+    B --> B3["forget()"]
+    B --> B4["get_memory()"]
+    B --> B5["clear_memory_key()"]
     
     C --> C1[Session State]
     C --> C2[Database Persistence]

@@ -4,22 +4,78 @@ Data access tools for wellness agent that respect privacy.
 
 from google.adk.tools import FunctionTool
 from typing import Dict, Any, Optional
-from wellness_agent.services.db.firestore_service import FirestoreService
-from wellness_agent.services.db.storage_service import StorageService
 import logging
 import os
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize services
-firestore_service = FirestoreService()
-storage_service = StorageService()
-
-# Initialize service for data operations
 use_mock = os.getenv("USE_MOCK_SERVICES", "false").lower() == "true"
 logger.info(f"Initializing data tools with USE_MOCK_SERVICES={use_mock}")
+
+
+class _MockFirestoreService:
+    """Returns realistic mock data so the agent works without GCP credentials."""
+
+    def get_department_stats(self, department=None, months=3):
+        return {"department": department or "Company-wide", "months": months,
+                "avg_wellness_score": 7.4, "participation_rate": 0.68, "trend": "improving"}
+
+    def get_leave_trends(self, department=None, months=6):
+        return {"department": department or "Company-wide", "months": months,
+                "avg_monthly_leave_days": 2.3, "trend": "stable"}
+
+    def get_health_trends(self, trend_type="stress_levels", months=6):
+        return {"trend_type": trend_type, "months": months,
+                "current_score": 6.8, "previous_score": 6.2, "trend": "improving"}
+
+    def get_wellness_programs(self):
+        return {"programs": [
+            {"name": "Mindfulness Sessions", "participation": 45, "satisfaction": 4.2},
+            {"name": "Fitness Challenge", "participation": 62, "satisfaction": 4.5},
+        ]}
+
+    def get_department_leave_rates(self):
+        return {"departments": [
+            {"name": "Engineering", "rate": 3.2}, {"name": "Sales", "rate": 2.8},
+            {"name": "HR", "rate": 2.1}, {"name": "Marketing", "rate": 2.5},
+        ]}
+
+
+class _MockStorageService:
+    """Returns mock policy/guide/report data without GCP Storage."""
+
+    def find_policy_document(self, policy_type):
+        return {"policy_type": policy_type, "title": f"{policy_type.replace('_', ' ').title()} Policy",
+                "content": f"This is the company {policy_type} policy. Contact HR for details."}
+
+    def get_wellness_guide(self, guide_type):
+        return {"guide_type": guide_type, "title": f"{guide_type.replace('_', ' ').title()} Guide",
+                "content": f"Wellness guide for {guide_type}. Consult your wellness coordinator."}
+
+    def get_report(self, report_type, filters=None):
+        return {"report_type": report_type, "summary": f"Aggregated {report_type} report",
+                "total_employees": 150, "period": "Q1 2024"}
+
+    def generate_signed_url(self, file_path, expiration_minutes=60):
+        return {"url": f"https://storage.example.com/mock/{file_path}?token=mock",
+                "expires_in_minutes": expiration_minutes}
+
+    def list_resources(self, prefix=""):
+        return {"resources": [
+            {"name": "wellness_guide_mental_health.pdf", "type": "wellness_guides"},
+            {"name": "leave_policy_2024.pdf", "type": "policy_documents"},
+        ]}
+
+
+if use_mock:
+    firestore_service = _MockFirestoreService()
+    storage_service = _MockStorageService()
+else:
+    from wellness_agent.services.db.firestore_service import FirestoreService
+    from wellness_agent.services.db.storage_service import StorageService
+    firestore_service = FirestoreService()
+    storage_service = StorageService()
 
 def get_department_stats(department: Optional[str] = None, months: int = 3) -> Dict[str, Any]:
     """

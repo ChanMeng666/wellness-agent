@@ -4,6 +4,8 @@ from google.adk.agents import Agent
 from typing import Dict, Any
 from google.genai import types
 
+from wellness_agent.llm_config import create_model
+
 from wellness_agent.prompts import ROOT_INSTRUCTION
 from wellness_agent.sub_agents.employee_support.agent import employee_support_tool
 from wellness_agent.sub_agents.hr_manager.agent import hr_manager_tool
@@ -25,25 +27,8 @@ from wellness_agent.tools.data_tools import (
     file_link_tool
 )
 
-# Custom callback for privacy controls - kept for reference but not used
-def privacy_callback(state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    A callback to ensure proper privacy controls are enforced.
-    
-    This would be expanded in a real implementation to:
-    1. Check user role and permissions
-    2. Filter sensitive data based on role
-    3. Log access attempts for compliance
-    4. Apply differential privacy as needed
-    """
-    # Get current user role from state
-    user_role = state.get("user_role", "unknown")
-    
-    # In a real implementation, we would filter state based on role
-    # This is just a stub for demonstration
-    print(f"Privacy callback executed for user role: {user_role}")
-    
-    return state
+# Note: privacy_callback is imported from wellness_agent.privacy.callbacks
+# and used in server.py. The duplicate stub that was here has been removed.
 
 # Update the root agent instruction to mention the data access capabilities
 ROOT_INSTRUCTION_UPDATED = ROOT_INSTRUCTION + """
@@ -102,7 +87,7 @@ memory_tool_list = [
 memory_agent = Agent(
     name="memory_agent",
     description="Agent for managing conversation memory",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction="""You help store and retrieve information from the conversation. 
 
 Use these memory tools to provide a personalized experience:
@@ -130,7 +115,7 @@ memory_tool = AgentTool(agent=memory_agent)
 data_agent = Agent(
     name="data_agent",
     description="Agent for accessing company wellness data with privacy protections",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction="""You help retrieve and analyze company wellness data while strictly protecting employee privacy.
 
 Only use these data tools as appropriate for the user's role:
@@ -174,7 +159,7 @@ data_tool = AgentTool(agent=data_agent)
 root_agent = Agent(
     name="wellness_support_agent",
     description="A comprehensive agent for workplace wellness that supports employees, HR, and employers with privacy-focused tools",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction=ROOT_INSTRUCTION_UPDATED,
     tools=[
         employee_support_tool,

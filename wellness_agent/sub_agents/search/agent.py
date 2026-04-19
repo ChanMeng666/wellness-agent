@@ -4,6 +4,7 @@ from google.adk.agents import Agent
 from google.adk.tools import google_search
 from google.adk.tools.agent_tool import AgentTool
 from google.genai import types
+from wellness_agent.llm_config import create_model
 
 # Since Google search cannot be combined with other tools on Gemini 1.5,
 # we create a dedicated search agent that only uses Google search
@@ -25,7 +26,7 @@ Remember that your searches are used to support employees, HR managers, and empl
 search_agent = Agent(
     name="search_agent",
     description="A specialized agent that searches for wellness information from reputable sources",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction=SEARCH_AGENT_INSTRUCTION,
     tools=[google_search],
     generate_content_config=types.GenerateContentConfig(

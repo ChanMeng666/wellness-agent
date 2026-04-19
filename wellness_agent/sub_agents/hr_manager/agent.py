@@ -2,6 +2,7 @@
 
 from google.adk.agents import Agent
 from google.adk.tools.agent_tool import AgentTool
+from wellness_agent.llm_config import create_model
 from wellness_agent.shared_libraries.memory import memorize, memorize_list, forget, get_memory, clear_memory_key
 from google.adk.tools import FunctionTool
 
@@ -18,7 +19,7 @@ memory_tool_list = [
 hr_manager_agent = Agent(
     name="hr_manager_agent",
     description="Agent specifically for HR managers to manage anonymized wellness data and policy creation",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction="""You are an HR Manager Wellness Assistant focused on supporting HR professionals.
 
 Your role as the HR Manager Assistant is to:

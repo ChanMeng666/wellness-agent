@@ -3,7 +3,7 @@
 from datetime import datetime
 import json
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.sessions.state import State
@@ -102,7 +102,7 @@ def get_memory(key: str, tool_context: ToolContext) -> Dict[str, Any]:
         return {"value": mem_dict[key]}
     return {"status": f'Memory key "{key}" not found', "value": None}
 
-def _set_initial_states(source: Dict[str, Any], target: State | Dict[str, Any]):
+def _set_initial_states(source: Dict[str, Any], target: Union[State, Dict[str, Any]]):
     """
     Set up initial session state given a JSON object of states.
     

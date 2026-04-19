@@ -4,6 +4,7 @@ from google.adk.agents import Agent
 from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools import FunctionTool
 from google.genai import types
+from wellness_agent.llm_config import create_model
 
 from wellness_agent.sub_agents.leave_requests.prompts import (
     LEAVE_REQUESTS_INSTRUCTION,
@@ -57,7 +58,7 @@ memory_tools = [
 quick_request_agent = Agent(
     name="quick_request_agent",
     description="An agent that helps employees submit quick leave requests with privacy",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction=QUICK_REQUEST_MEMORY_INSTRUCTIONS,
     tools=[submit_quick_request_tool] + memory_tools,
 )
@@ -65,7 +66,7 @@ quick_request_agent = Agent(
 accommodation_plan_agent = Agent(
     name="accommodation_plan_agent",
     description="An agent that helps employees create longer-term accommodation plans",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction=ACCOMMODATION_PLAN_MEMORY_INSTRUCTIONS,
     tools=[create_accommodation_plan_tool] + memory_tools,
 )
@@ -74,7 +75,7 @@ accommodation_plan_agent = Agent(
 leave_requests_agent = Agent(
     name="leave_requests_agent",
     description="An agent that helps employees request time off or accommodations with dignity and privacy",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction=LEAVE_REQUESTS_MEMORY_INSTRUCTION,
     tools=[
         AgentTool(agent=quick_request_agent),

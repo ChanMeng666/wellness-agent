@@ -2,6 +2,7 @@
 
 from google.adk.agents import Agent
 from google.adk.tools.agent_tool import AgentTool
+from wellness_agent.llm_config import create_model
 from wellness_agent.shared_libraries.memory import memorize, memorize_list, forget, get_memory, clear_memory_key
 from google.adk.tools import FunctionTool
 
@@ -18,7 +19,7 @@ memory_tool_list = [
 employee_support_agent = Agent(
     name="employee_support_agent",
     description="Agent specifically for supporting employee wellness and providing resources",
-    model="gemini-1.5-flash",
+    model=create_model(),
     instruction="""You are an Employee Wellness Support Assistant focused on helping individual employees.
 
 Your role as the Employee Support Assistant is to:

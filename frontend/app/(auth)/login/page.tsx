@@ -71,6 +71,22 @@ export default function Page() {
             {' for free.'}
           </p>
         </AuthForm>
+
+        {/* Developer brand credit — Chan Meng */}
+        <div className="flex flex-col items-center gap-2 px-4 text-center text-xs text-gray-500 dark:text-zinc-400">
+          <a
+            href="https://github.com/ChanMeng666"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 transition-colors hover:text-gray-700 dark:hover:text-zinc-200"
+          >
+            <img src="/brand/chan-meng-monkey.svg" alt="Chan Meng" className="h-5 w-5 dark:invert" />
+            <span className="font-medium">Built by Chan Meng — custom app development</span>
+          </a>
+          <a href="mailto:chanmeng.dev@gmail.com" className="hover:underline">
+            chanmeng.dev@gmail.com
+          </a>
+        </div>
       </div>
     </div>
   );
